@@ -56,7 +56,7 @@ def extract_topics_and_summarize(client, text)
   messages = []
   if current_discussion.length > 1
     messages << {role: "user", content: "Given the prior summary and topics:\n---\n#{current_discussion}\n---"}
-    messages << {role: "user", content: "Continue the running summary and list of topcs using the following discussion:\n---#{text}\n---"}
+    messages << {role: "user", content: "Continue the running summary and list of topics using the following discussion:\n---#{text}\n---"}
   else
     messages << {role: "user", content: "Extract topics and summarize the following discussion:\n---#{text}\n---"}
   end
