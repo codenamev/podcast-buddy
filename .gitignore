@@ -14,3 +14,6 @@
 # PodcastBuddy side-affects
 response.mp3
 whisper.cpp
+
+# Build and release side-affects
+/release/
