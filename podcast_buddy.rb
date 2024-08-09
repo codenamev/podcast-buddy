@@ -111,9 +111,18 @@ end_signal = PodSignal.new
 
 # Method to extract topics and summarize
 def extract_topics_and_summarize(client, text)
+  current_discussion = File.exists?(PodcastBuddy.discussion_log_file) ? File.read(PodcastBuddy.discussion_log_file) : ""
+  current_discussion.rstrip.squeeze!
+  messages = []
+  if current_discussion.length > 1
+    messages << { role: "user", content: "Given the prior summary and topics:\n---\n#{current_discussion}\n---" }
+    messages << { role: "user", content: "Continue the running summary and list of topcs using the following discussion:\n---#{text}\n---" }
+  else
+    messages << { role: "user", content: "Extract topics and summarize the following discussion:\n---#{text}\n---" }
+  end
   response = client.chat(parameters: {
     model: "gpt-4o",
-    messages: [{ role: "user", content: "Extract topics and summarize: #{text}" }],
+    messages: messages,
     max_tokens: 150
   })
   response.dig("choices", 0, "message", "content").strip
@@ -122,7 +131,7 @@ end
 def answer_question(client, question)
   latest_context = `tail -n 25 #{PodcastBuddy.discussion_log_file}`
   previous_discussion = @full_transcription.split("\n").last(25)
-  PodcastBuddy.logger.info "Context: #{latest_context}\nPrevious discussion: #{previous_discussion}\nAnswering question: #{question}"
+  PodcastBuddy.logger.info "Context:\n---#{latest_context}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"
   response = client.chat(parameters: {
     model: "gpt-4o",
     messages: [
@@ -161,11 +170,17 @@ def process_audio_stream(client)
       end
 
       while transcription = stdout.gets
+        # Cleanup captured text from whisper
         transcription_text = (transcription.scan(/\[[0-9]+.*[0-9]+\]\s?(.*)\n/) || [p])[0].to_s
+        PodcastBuddy.logger.debug "Received transcription: #{transcription_text}"
+        transcription_text = transcription_text.gsub("[BLANK_AUDIO]", "")
+        transcription_text = transcription_text.gsub(/\A\["\s?/, "")
+        transcription_text = transcription_text.gsub(/"\]\Z/, "")
         break if @shutdown_flag
 
-        PodcastBuddy.logger.debug "Received transcription at #{Time.now}: #{transcription_text}"
-        PodcastBuddy.logger.info transcription
+        PodcastBuddy.logger.debug "Filtered: #{transcription_text}"
+        next if transcription_text.to_s.strip.squeeze.empty?
+
         @full_transcription += transcription_text
 
         if @listening_for_question
@@ -204,10 +219,10 @@ def periodic_summarization(client, interval = 15)
       sleep interval
       latest_transcriptions = []
       latest_transcriptions << @transcription_queue.pop until @transcription_queue.empty?
-      unless latest_transcriptions.empty?
+      unless latest_transcriptions.join.strip.squeeze.empty?
         PodcastBuddy.logger.debug "[periodic summarization] Latest transcript: #{latest_transcriptions.join}"
         summary = extract_topics_and_summarize(client, latest_transcriptions.join)
-        File.open(PodcastBuddy.discussion_log_file, 'a') { |file| file.puts summary }
+        File.write(PodcastBuddy.discussion_log_file, summary)
       end
     rescue StandardError => e
       PodcastBuddy.logger.warn "[summarization] periodic summarization failed: #{e.message}"
