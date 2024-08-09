@@ -3,15 +3,25 @@
 This is a simple Ruby command-line tool that allows dropping in an AI buddy to
 your podcast.
 
+## Installation
+
+Install the gem and add to the application's Gemfile by executing:
+
+    $ bundle add podcast-buddy
+
+If bundler is not being used to manage dependencies, install the gem by executing:
+
+    $ gem install podcast-buddy
+
 ## Usage
 
 Run your buddy from the command-line:
 
 ```bash
-ruby podcast_buddy.rb
+podcast-buddy
 ```
 
-This will install a couple dependencies:
+This will install a couple dependencies, if they don't exist:
 
 1. `git` (for cloning whisper.cpp locally)
 2. `sdl2` - Simple DirectMedia Layer; for cross-platform audio input access
@@ -37,3 +47,21 @@ Once you're done, simply `ctrl-c` to wrap things up.
 1. Your full transcript is stored in `tmp/transcript.log`
 2. A summarization of the discussion and topics are stored in `tmp/discussion.log`
 3. The raw whisper logs are stored in `tmp/whisper.log`
+
+## Development
+
+After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+
+To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+
+## Contributing
+
+Bug reports and pull requests are welcome on GitHub at https://github.com/codenamev/podcast-buddy. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/codenamev/podcast-buddy/blob/main/CODE_OF_CONDUCT.md).
+
+## License
+
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+## Code of Conduct
+
+Everyone interacting in the PodcastBuddy project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/codenamev/podcast-buddy/blob/main/CODE_OF_CONDUCT.md).

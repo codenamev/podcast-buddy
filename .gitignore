@@ -1,2 +1,16 @@
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/*
+!/tmp/.gitkeep
+
+# rspec failure tracking
+.rspec_status
+
+# PodcastBuddy side-affects
 response.mp3
 whisper.cpp
