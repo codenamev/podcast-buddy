@@ -29,11 +29,11 @@ module PodcastBuddy
   end
 
   def self.discussion_log_file
-    @discussion_log_file ||= "#{root}/tmp/discussion.log"
+    @discussion_log_file ||= "#{root}/tmp/discussion-#{Time.new.strftime("%Y-%m-%d")}.log"
   end
 
   def self.transcript_file
-    @transcript_file ||= "#{root}/tmp/transcript.log"
+    @transcript_file ||= "#{root}/tmp/transcript-#{Time.new.strftime("%Y-%m-%d")}.log"
   end
 
   def self.update_transcript(text)
