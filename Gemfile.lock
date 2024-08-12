@@ -2,19 +2,66 @@ PATH
   remote: .
   specs:
     podcast-buddy (0.1.1)
+      async
+      async-http-faraday
+      rainbow
 
 GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.2)
+    async (2.15.3)
+      console (~> 1.26)
+      fiber-annotation
+      io-event (~> 1.6, >= 1.6.5)
+    async-http (0.69.0)
+      async (>= 2.10.2)
+      async-pool (~> 0.7)
+      io-endpoint (~> 0.11)
+      io-stream (~> 0.4)
+      protocol-http (~> 0.26)
+      protocol-http1 (~> 0.19)
+      protocol-http2 (~> 0.18)
+      traces (>= 0.10)
+    async-http-faraday (0.15.0)
+      async-http (~> 0.42)
+      faraday
+    async-pool (0.8.0)
+      async (>= 1.25)
+    console (1.27.0)
+      fiber-annotation
+      fiber-local (~> 1.1)
+      json
     diff-lcs (1.5.1)
+    faraday (2.10.1)
+      faraday-net_http (>= 2.0, < 3.2)
+      logger
+    faraday-net_http (3.1.1)
+      net-http
+    fiber-annotation (0.2.0)
+    fiber-local (1.1.0)
+      fiber-storage
+    fiber-storage (1.0.0)
+    io-endpoint (0.13.0)
+    io-event (1.6.5)
+    io-stream (0.4.0)
     json (2.7.2)
     language_server-protocol (3.17.0.3)
     lint_roller (1.1.0)
+    logger (1.6.0)
+    net-http (0.4.1)
+      uri
     parallel (1.26.1)
     parser (3.3.4.2)
       ast (~> 2.4.1)
       racc
+    protocol-hpack (1.5.0)
+    protocol-http (0.28.1)
+    protocol-http1 (0.19.1)
+      protocol-http (~> 0.22)
+    protocol-http2 (0.18.0)
+      protocol-hpack (~> 1.4)
+      protocol-http (~> 0.18)
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.2.1)
@@ -64,7 +111,9 @@ GEM
       lint_roller (~> 1.1)
       rubocop-performance (~> 1.21.0)
     strscan (3.1.0)
+    traces (0.11.1)
     unicode-display_width (2.5.0)
+    uri (0.13.0)
 
 PLATFORMS
   ruby

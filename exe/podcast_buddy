@@ -2,6 +2,8 @@
 
 require_relative "../lib/podcast_buddy"
 require "optparse"
+require "rainbow"
+require "timeout"
 
 options = {}
 OptionParser.new do |opts|
@@ -32,201 +34,297 @@ PodcastBuddy.setup
 PodcastBuddy.logger.info "Setup complete."
 
 # OpenAI API client setup
-raise "Please set an OPENAI_ACCESS_TOKEN environment variable." if ENV["OPENAI_ACCESS_TOKEN"].to_s.strip.squeeze.empty?
-
-client = OpenAI::Client.new(access_token: ENV["OPENAI_ACCESS_TOKEN"], log_errors: true)
-
-# Signals for question detection
-question_signal = PodcastBuddy::PodSignal.new
-end_signal = PodcastBuddy::PodSignal.new
+# Raises error if no OPENAI_ACCESS_TOKEN env is set
+PodcastBuddy.openai_client
 
 # Initialize variables
 @latest_transcription = ""
-@question_transcription = ""
-@full_transcription = ""
+@full_transcript = ""
 @listening_for_question = false
-@shutdown_flag = false
+@shutdown = false
 @threads = []
 @transcription_queue = Queue.new
+@question_transcript = Queue.new
 
 # Method to extract topics and summarize
-def extract_topics_and_summarize(client, text)
-  current_discussion = File.exist?(PodcastBuddy.discussion_log_file) ? File.read(PodcastBuddy.discussion_log_file) : ""
-  current_discussion.rstrip.squeeze!
-  messages = []
-  if current_discussion.length > 1
-    messages << {role: "user", content: "Given the prior summary and topics:\n---\n#{current_discussion}\n---"}
-    messages << {role: "user", content: "Continue the running summary and list of topics using the following discussion:\n---#{text}\n---"}
-  else
-    messages << {role: "user", content: "Extract topics and summarize the following discussion:\n---#{text}\n---"}
+def extract_topics_and_summarize(text)
+  Sync do |parent|
+    parent.async { update_topics(text) }
+    parent.async { update_summary(text) }
   end
-  response = client.chat(parameters: {
-    model: "gpt-4o",
-    messages: messages,
-    max_tokens: 150
-  })
-  response.dig("choices", 0, "message", "content").strip
 end
 
-def answer_question(client, question)
-  latest_context = `tail -n 25 #{PodcastBuddy.discussion_log_file}`
-  previous_discussion = @full_transcription.split("\n").last(25)
-  PodcastBuddy.logger.info "Answering question:\n#{question}"
-  PodcastBuddy.logger.debug "Context:\n---#{latest_context}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"
-  response = client.chat(parameters: {
-    model: "gpt-4o",
-    messages: [
-      {role: "system", content: "You are a kind and helpful podcast assistant helping to answer questions as them come up during a recording. Keep the answer succinct and without speculation."},
-      {role: "user", content: "Context:\n#{latest_context}\n\nPrevious Discussion:\n#{previous_discussion}\n\nQuestion:\n#{question}\n\nAnswer:"}
-    ],
-    max_tokens: 150
-  })
-  response.dig("choices", 0, "message", "content").strip
+def update_topics(text)
+  Sync do
+    PodcastBuddy.logger.debug "Looking for topics related to: #{text}"
+    response = PodcastBuddy.openai_client.chat(parameters: {
+      model: "gpt-4o",
+      messages: [
+        {role: "system", content: "You are a kind and helpful podcast assistant diligantly extracting topics related to the discussion on the show. Your goal is to prepare this information in an optimal way for participants to ask questions in the context of what is being discussed, and optimally for use in the closing Show Notes."},
+        {role: "user", content: "Extract topics for the following Discussion:\n---\n#{text}\n---\n\nExclude any of these topics that have been previously discussed:\n---\n#{PodcastBuddy.current_topics}\n---\n\nIf there are no new topics to add, simply return an empty response."}
+      ],
+      max_tokens: 250
+    })
+    new_topics = response.dig("choices", 0, "message", "content").strip
+    PodcastBuddy.logger.debug "Updating topics: #{new_topics.split("\n").join(", ")}"
+    PodcastBuddy.add_to_topics(new_topics)
+  end
+end
+
+def update_summary(text)
+  Sync do
+    response = PodcastBuddy.openai_client.chat(parameters: {
+      model: "gpt-4o",
+      messages: [
+        {role: "system", content: "You are a kind and helpful podcast assistant diligantly keeping track of the overall discussion on the show. Your goal is to prepare a concise summary of the overall discussion for use in the Show Notes."},
+        {role: "user", content: "Previous Summary:\n---\n#{PodcastBuddy.current_summary}\n---\n\nLatest Discussion:\n---\n#{text}\n---"},
+        {role: "user", content: "Use the Previous Summary, and Latest Discussion, to combine into a single cohesive summary."}
+      ],
+      max_tokens: 250
+    })
+    new_summary = response.dig("choices", 0, "message", "content").strip
+    PodcastBuddy.logger.debug "Updating summary: #{new_summary}"
+    PodcastBuddy.add_to_summary(new_summary)
+  end
+end
+
+def answer_question
+  Async do
+    latest_context = "#{PodcastBuddy.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.current_topics.split("\n").last(10)}\n---\n"
+    previous_discussion = @full_transcript.split("\n").last(25)
+    question = ""
+    question << @question_transcript.pop until @question_transcript.empty?
+    PodcastBuddy.logger.info "Answering question:\n#{question}"
+    PodcastBuddy.logger.debug "Context:\n---#{latest_context}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"
+    response = PodcastBuddy.openai_client.chat(parameters: {
+      model: "gpt-4o",
+      messages: [
+        {role: "system", content: "You are a kind and helpful podcast assistant helping to answer questions as they come up during a recording. Keep the answer succinct and without speculation. Be playful, witty, and kind.  If a question is not asked try to add to the conversation as it best relates to the current discussion. Remember, this is a live recording, so there's no need to analyze and report on what is being asked."},
+        {role: "user", content: "Context:\n#{latest_context}\n\nPrevious Discussion:\n#{previous_discussion}\n\nQuestion:\n#{question}\n\nAnswer:"}
+      ],
+      max_tokens: 150
+    })
+    answer = response.dig("choices", 0, "message", "content").strip
+    PodcastBuddy.logger.debug "Answer: #{answer}"
+    text_to_speech(answer)
+    PodcastBuddy.logger.debug("Answer converted to speech: #{PodcastBuddy.answer_audio_file_path}")
+    play_answer
+  end
 end
 
 # Method to convert text to speech
-def text_to_speech(client, text)
-  response = client.audio.speech(parameters: {
+def text_to_speech(text)
+  response = PodcastBuddy.openai_client.audio.speech(parameters: {
     model: "tts-1",
     input: text,
     voice: "onyx",
     response_format: "mp3",
     speed: 1.0
   })
-  File.binwrite("response.mp3", response)
+  File.binwrite(PodcastBuddy.answer_audio_file_path, response)
+end
+
+def play_answer
+  PodcastBuddy.logger.debug("Playing answer...")
+  system("afplay #{PodcastBuddy.answer_audio_file_path}")
 end
 
 # Method to handle audio stream processing
-def process_audio_stream(client)
-  Thread.new do
-    whisper_command = "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 4 --step 0 --length 5000 --keep 500 --vad-thold 0.60 --audio-ctx 0 --keep-context -c 1"
+def process_audio_stream
+  Sync do |parent|
     PodcastBuddy.logger.info "Buffering audio..."
-    Open3.popen3(whisper_command) do |stdin, stdout, stderr, thread|
-      stderr_thread = Thread.new do
-        stderr.each { |line| PodcastBuddy.whisper_logger.error line }
-      end
-      stdout_thread = Thread.new do
-        stdout.each { |line| PodcastBuddy.whisper_logger.debug line }
-      end
+    Open3.popen3(PodcastBuddy.whisper_command) do |stdin, stdout, stderr, _thread|
+      error_log_task = parent.async { stderr.each { |line| PodcastBuddy.whisper_logger.error line } }
+      output_log_task = parent.async { stdout.each { |line| PodcastBuddy.whisper_logger.debug line } }
 
       while (transcription = stdout.gets)
-        # Cleanup captured text from whisper
-        transcription_text = (transcription.scan(/\[[0-9]+.*[0-9]+\]\s?(.*)\n/) || [p])[0].to_s
-        PodcastBuddy.logger.debug "Received transcription: #{transcription_text}"
-        transcription_text = transcription_text.gsub("[BLANK_AUDIO]", "")
-        transcription_text = transcription_text.gsub(/\A\["\s?/, "")
-        transcription_text = transcription_text.gsub(/"\]\Z/, "")
-        break if @shutdown_flag
+        PodcastBuddy.logger.debug("Shutdown: process_audio_stream...") and break if @shutdown
+        PodcastBuddy.logger.debug("Still listening...")
 
-        PodcastBuddy.logger.debug "Filtered: #{transcription_text}"
-        next if transcription_text.to_s.strip.squeeze.empty?
-
-        @full_transcription += transcription_text
-
-        if @listening_for_question
-          @question_transcription += transcription_text
-          PodcastBuddy.logger.info "Heard Question: #{transcription_text}"
-        else
-          @transcription_queue << transcription_text
-          PodcastBuddy.logger.info "Heard: #{transcription_text}"
-          PodcastBuddy.update_transcript(transcription_text)
-        end
+        last_transcription_task = parent.async { process_transcription(transcription) }
       end
 
-      # Close streams and join stderr thread on shutdown
-      stderr_thread.join
-      stdout_thread.join
-      stdin.close
-      stdout.close
-      stderr.close
+      error_log_task.wait
+      output_log_task.wait
+      last_transcription_task.wait
     end
   end
 end
 
-# Method to generate show notes
-def generate_show_notes(client, transcription)
-  summary = extract_topics_and_summarize(client, transcription)
-  File.open("show_notes.md", "w") do |file|
-    file.puts "# Show Notes"
-    file.puts summary
+def process_transcription(line)
+  # Cleanup captured text from whisper
+  transcription_text = (line.scan(/\[[0-9]+.*[0-9]+\]\s?(.*)\n/) || [p])[0].to_s
+  PodcastBuddy.logger.debug "Received transcription: #{transcription_text}" if transcription_text
+  transcription_text = transcription_text.gsub("[BLANK_AUDIO]", "")
+  transcription_text = transcription_text.gsub(/\A\["\s?/, "")
+  transcription_text = transcription_text.gsub(/"\]\Z/, "")
+
+  return if transcription_text.to_s.strip.squeeze.empty?
+
+  @full_transcript += transcription_text
+
+  if @listening_for_question
+    PodcastBuddy.logger.info "Heard Question: #{transcription_text}"
+    @question_transcript << transcription_text
+  else
+    PodcastBuddy.logger.info "Heard: #{transcription_text}"
+    PodcastBuddy.update_transcript(transcription_text)
+    @transcription_queue << transcription_text
   end
 end
 
+# Method to generate show notes
+def generate_show_notes
+  PodcastBuddy.logger.info "Generting show notes..."
+  response = PodcastBuddy.openai_client.chat(parameters: {
+    model: "gpt-4o",
+    messages: [
+      {role: "system", content: "You are a kind and helpful podcast assistant helping to take notes for the show, and extract useful information being discussed for listeners."},
+      {role: "user", content: "Transcript:\n---\n#{File.read(PodcastBuddy.transcript_file)}\n---\n\nTopics:\n---\n#{File.read(PodcastBuddy.topics_log_file)}\n---\n\nUse the above transcript and topics to create Show Notes in markdown that outline the discussion.  Extract a breif summary that describes the overall conversation, the people involved and their roles, and sentiment of the topics discussed.  Follow the summary with a list of helpful links to any libraries, products, or other resources related to the discussion." }
+    ],
+    max_tokens: 150
+  })
+  show_notes = response.dig("choices", 0, "message", "content").strip
+  File.open(PodcastBuddy.show_notes_file, "w") do |file|
+    file.puts show_notes
+  end
+
+  PodcastBuddy.logger.info to_human("Show notes saved to: #{PodcastBuddy.show_notes_file}", :success)
+end
+
 # Periodically summarize latest transcription
-def periodic_summarization(client, interval = 15)
-  Thread.new do
+def periodic_summarization(interval = 15)
+  Sync do
     loop do
-      break if @shutdown_flag
+      PodcastBuddy.logger.debug("Shutdown: periodic_summarization...") and break if @shutdown
 
       sleep interval
-      summarize_latest(client)
+      summarize_latest
     rescue => e
       PodcastBuddy.logger.warn "[summarization] periodic summarization failed: #{e.message}"
     end
   end
 end
 
-def summarize_latest(client = OpenAI::Client.new(access_token: ENV["OPENAI_ACCESS_TOKEN"], log_errors: true))
+def summarize_latest
   latest_transcriptions = []
   latest_transcriptions << @transcription_queue.pop until @transcription_queue.empty?
   return if latest_transcriptions.join.strip.squeeze.empty?
 
   PodcastBuddy.logger.debug "[periodic summarization] Latest transcript: #{latest_transcriptions.join}"
-  summary = extract_topics_and_summarize(client, latest_transcriptions.join)
-  File.write(PodcastBuddy.discussion_log_file, summary)
+  extract_topics_and_summarize(latest_transcriptions.join)
 end
+
+def wait_for_question_end
+  Sync do |parent|
+    loop do
+      PodcastBuddy.logger.debug("Shutdown: wait_for_question_end...") and break if @shutdown
+
+      # The wait_for_question_start will signal this
+      sleep 0.1 and next if !@listening_for_question
+
+      input = ""
+      Timeout.timeout(5) do
+        input = gets
+        PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
+        next unless input.to_s.include?("\n")
+      rescue Timeout::Error
+        # Let the loop continue so that it can catch @shutdown periodically, or
+        # capture the signal
+        PodcastBuddy.logger.debug("Input timeout...")
+        next
+      end
+
+      if input.empty?
+        next
+      else
+        PodcastBuddy.logger.info "End of question signal.  Generating answer..."
+        @listening_for_question = false
+        answer_question.wait
+        PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
+        break
+      end
+    end
+  end
+end
+
+def wait_for_question_start
+  Sync do |parent|
+    PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
+    loop do
+      PodcastBuddy.logger.debug("Shutdown: wait_for_question...") and break if @shutdown
+
+      PodcastBuddy.logger.debug("Waiting for input...")
+      input = ""
+      Timeout.timeout(5) do
+        input = gets
+        PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
+        @question_transcript.clear
+        @listening_for_question = true if input.include?("\n")
+      rescue Timeout::Error
+        # Let the loop continue so that it can catch @shutdown periodically, or
+        # capture the signal
+        next
+      end
+
+      next unless @listening_for_question
+
+      PodcastBuddy.logger.info to_human("🎙️ Listening for quesiton. Press ", :wait) + to_human("Enter", :input) + to_human(" to signal the end of the question...", :wait)
+      wait_for_question_end
+    end
+  end
+end
+
+def to_human(text, label = :info)
+  case label.to_sym
+  when :info
+    Rainbow(text).blue
+  when :wait
+    Rainbow(text).yellow
+  when :input
+    Rainbow(text).black.bg(:yellow)
+  when :success
+    Rainbow(text).green
+  else
+    text
+  end
+end
+
 
 # Handle Ctrl-C to generate show notes
 Signal.trap("INT") do
-  puts "\nShutting down streams..."
-  @shutdown_flag = true
+  puts to_human("\nShutting down streams...", :wait)
+  @shutdown = true
   # Wait for all threads to finish
-  @threads.compact.each(&:join)
+  #@threads.compact.each(&:join)
 
   # Will have to re-think this.  Can't syncronize from a trap (Faraday)
   # Also cannot log from trap
   #puts "\nGenerating show notes..."
-  #generate_show_notes(client, @full_transcription)
-  exit
-end
-
-# Setup signal subscriptions
-question_signal.subscribe do
-  PodcastBuddy.logger.debug "Question signal received"
-  @listening_for_question = true
-  @question_transcription.clear
-  summarize_latest
-end
-
-end_signal.subscribe do
-  PodcastBuddy.logger.info "End of question signal received"
-  @listening_for_question = false
-
-  PodcastBuddy.logger.info "Waiting for question to complete (enter return again)..."
-  loop do
-    PodcastBuddy.logger.debug "Checking for question..."
-    sleep 0.3
-    break if @question_transcription.to_s.length > 0 || @listening_for_question == true
-  end
-  # Guard against interruptions
-  if !@question_transcription.empty?
-    response_text = answer_question(client, @question_transcription)
-    text_to_speech(client, response_text)
-    system("afplay response.mp3")
-  end
+  #generate_show_notes(client, @full_transcript)
+  #exit
 end
 
 # Start audio stream processing
-@threads << process_audio_stream(client)
-# Start periodic summarization
-@threads << periodic_summarization(client, 60)
+Async do |task|
+  audio_input_task = task.async { process_audio_stream }
+  periodic_summarization_task = task.async { periodic_summarization(60) }
+  question_listener_task = task.async { wait_for_question_start }
 
-# Main loop to wait for question and end signals
-loop do
-  PodcastBuddy.logger.info "Press Enter to signal a question start..."
-  gets
-  question_signal.trigger
-  PodcastBuddy.logger.info "Press Enter to signal the end of the question..."
-  gets
-  end_signal.trigger
+  # Allow recording up to 2 hours, but hard-timeout so that we don't become
+  # zombies.
+  task.with_timeout(60*60*2) do
+    # Wait for shutdown sub-tasks to complete
+    task.yield until @shutdown
+  end
+
+  PodcastBuddy.logger.info "Waiting for all tasks to complete before exiting..."
+  audio_input_task.wait
+  PodcastBuddy.logger.debug "Audio input task complete."
+  question_listener_task.wait
+  PodcastBuddy.logger.debug "Question listener task complete."
+  periodic_summarization_task.wait
+  PodcastBuddy.logger.debug "Periodic Summarization task complete."
+
+  generate_show_notes
 end
