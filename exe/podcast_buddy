@@ -76,9 +76,9 @@ def update_summary(text)
     response = PodcastBuddy.openai_client.chat(parameters: {
       model: "gpt-4o",
       messages: [
-        {role: "system", content: "You are a kind and helpful podcast assistant diligantly keeping track of the overall discussion on the show. Your goal is to prepare a concise summary of the overall discussion for use in the Show Notes."},
+        {role: "system", content: "You are a kind and helpful podcast assistant diligantly keeping track of the overall discussion on the show. Your goal is to prepare a concise summary of the overall discussion."},
         {role: "user", content: "Previous Summary:\n---\n#{PodcastBuddy.current_summary}\n---\n\nLatest Discussion:\n---\n#{text}\n---"},
-        {role: "user", content: "Use the Previous Summary, and Latest Discussion, to combine into a single cohesive summary."}
+        {role: "user", content: "Use the Previous Summary, and Latest Discussion, to combine into a single cohesive summary.\nSummary: "}
       ],
       max_tokens: 250
     })
@@ -175,12 +175,14 @@ end
 
 # Method to generate show notes
 def generate_show_notes
+  return if PodcastBuddy.current_transcript.strip.squeeze.empty?
+
   PodcastBuddy.logger.info "Generting show notes..."
   response = PodcastBuddy.openai_client.chat(parameters: {
     model: "gpt-4o",
     messages: [
       {role: "system", content: "You are a kind and helpful podcast assistant helping to take notes for the show, and extract useful information being discussed for listeners."},
-      {role: "user", content: "Transcript:\n---\n#{File.read(PodcastBuddy.transcript_file)}\n---\n\nTopics:\n---\n#{File.read(PodcastBuddy.topics_log_file)}\n---\n\nUse the above transcript and topics to create Show Notes in markdown that outline the discussion.  Extract a breif summary that describes the overall conversation, the people involved and their roles, and sentiment of the topics discussed.  Follow the summary with a list of helpful links to any libraries, products, or other resources related to the discussion." }
+      {role: "user", content: "Transcript:\n---\n#{PodcastBuddy.current_transcript}\n---\n\nTopics:\n---\n#{PodcastBuddy.current_topics}\n---\n\nUse the above transcript and topics to create Show Notes in markdown that outline the discussion.  Extract a breif summary that describes the overall conversation, the people involved and their roles, and sentiment of the topics discussed.  Follow the summary with a list of helpful links to any libraries, products, or other resources related to the discussion." }
     ],
     max_tokens: 150
   })

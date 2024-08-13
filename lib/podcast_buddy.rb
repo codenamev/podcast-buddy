@@ -56,8 +56,13 @@ module PodcastBuddy
     @show_notes_file ||= "#{root}/tmp/show-notes-#{Time.new.strftime("%Y-%m-%d")}.md"
   end
 
+  def self.current_transcript
+    @current_transcript ||= File.exist?(transcript_file) ? File.read(transcript_file) : ""
+  end
+
   def self.update_transcript(text)
     File.open(transcript_file, "a") { |f| f.puts text }
+    current_transcript << text
   end
 
   def self.current_summary
@@ -66,7 +71,7 @@ module PodcastBuddy
 
   def self.add_to_summary(text)
     File.open(summary_log_file, "a") { |f| f.puts text }
-    @current_summary << text
+    current_summary << text
   end
 
   def self.current_topics
@@ -75,7 +80,7 @@ module PodcastBuddy
 
   def self.add_to_topics(topics)
     File.open(topics_log_file, "a") { |f| f.puts topics }
-    @current_topics << topics
+    current_topics << topics
   end
 
   def self.answer_audio_file_path
