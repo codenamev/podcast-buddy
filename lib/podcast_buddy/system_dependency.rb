@@ -20,7 +20,7 @@ module PodcastBuddy
       if name.to_s == "whisper"
         Dir.exist?("whisper.cpp")
       else
-        system("brew list #{name}") || system("type -a #{name}")
+        system("brew list -1 #{name} > /dev/null") || system("type -a #{name}")
       end
     end
 
