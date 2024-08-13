@@ -297,14 +297,6 @@ end
 Signal.trap("INT") do
   puts to_human("\nShutting down streams...", :wait)
   @shutdown = true
-  # Wait for all threads to finish
-  #@threads.compact.each(&:join)
-
-  # Will have to re-think this.  Can't syncronize from a trap (Faraday)
-  # Also cannot log from trap
-  #puts "\nGenerating show notes..."
-  #generate_show_notes(client, @full_transcript)
-  #exit
 end
 
 # Start audio stream processing
