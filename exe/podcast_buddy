@@ -84,7 +84,7 @@ def update_summary(text)
     })
     new_summary = response.dig("choices", 0, "message", "content").strip
     PodcastBuddy.logger.debug "Updating summary: #{new_summary}"
-    PodcastBuddy.add_to_summary(new_summary)
+    PodcastBuddy.update_summary(new_summary)
   end
 end
 

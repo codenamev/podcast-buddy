@@ -69,9 +69,10 @@ module PodcastBuddy
     @current_summary ||= File.exist?(summary_log_file) ? File.read(summary_log_file) : ""
   end
 
-  def self.add_to_summary(text)
-    File.open(summary_log_file, "a") { |f| f.puts text }
-    current_summary << text
+  def self.update_summary(text)
+    @current_summary = text
+    File.write(summary_log_file, text)
+    @current_summary
   end
 
   def self.current_topics
