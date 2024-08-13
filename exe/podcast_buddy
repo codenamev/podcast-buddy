@@ -61,11 +61,11 @@ def update_topics(text)
       model: "gpt-4o",
       messages: [
         {role: "system", content: "You are a kind and helpful podcast assistant diligantly extracting topics related to the discussion on the show. Your goal is to prepare this information in an optimal way for participants to ask questions in the context of what is being discussed, and optimally for use in the closing Show Notes."},
-        {role: "user", content: "Extract topics for the following Discussion:\n---\n#{text}\n---\n\nExclude any of these topics that have been previously discussed:\n---\n#{PodcastBuddy.current_topics}\n---\n\nIf there are no new topics to add, simply return an empty response."}
+        {role: "user", content: "Extract topics for the following Discussion:\n---\n#{text}\n---\n\nExclude any of these topics that have been previously discussed:\n---\n#{PodcastBuddy.current_topics}\n---\n\nIf there are no new topics to add, return NONE."}
       ],
       max_tokens: 250
     })
-    new_topics = response.dig("choices", 0, "message", "content").strip
+    new_topics = response.dig("choices", 0, "message", "content").gsub("NONE", "").strip
     PodcastBuddy.logger.debug "Updating topics: #{new_topics.split("\n").join(", ")}"
     PodcastBuddy.add_to_topics(new_topics)
   end
