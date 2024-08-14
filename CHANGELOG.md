@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.2.1] - 2024-08-13
+
+* Fixes typo in command-line help banner to reference proper podcast_buddy command
+* Updates README with new options
+
 ## [0.2.0] - 2024-08-13
 
 * 9edc409 - Refactor to make use of Async

@@ -8,7 +8,7 @@ require "fileutils"
 
 options = {}
 OptionParser.new do |opts|
-  opts.banner = "Usage: podcast-buddy [options]"
+  opts.banner = "Usage: podcast_buddy [options]"
 
   opts.on("--debug", "Run in debug mode") do |v|
     options[:debug] = v

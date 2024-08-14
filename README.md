@@ -44,9 +44,17 @@ Once you're done, simply `ctrl-c` to wrap things up.
 
 ### Helpful files logged during your session with Buddy
 
-1. Your full transcript is stored in `tmp/transcript.log`
-2. A summarization of the discussion and topics are stored in `tmp/discussion.log`
-3. The raw whisper logs are stored in `tmp/whisper.log`
+1. Your full transcript is stored in `tmp/transcripti-%Y-%m-%d.log`.
+2. A summarization of the discussion is stored in `tmp/summary-%Y-%m-%d.log`.
+3. A list of topics extracted from the discussion is stored in `tmp/topics-%Y-%m-%d.log`.
+4. The Show Notes are stored in `tmp/show-notes-%Y-%m-%d.log`.
+5. The raw whisper logs are stored in `tmp/whisper.log`.
+
+### Options
+
+**debug mode**: `podcast_buddy --debug` – shows verbose logging
+**custom whisper model**: `podcast_buddy --whisper base.en` – use any of [these available models](https://github.com/ggerganov/whisper.cpp/blob/master/models/download-ggml-model.sh#L28-L49).
+**custom session**: `podcast_buddy --name "Ruby Rogues 08-15-2024"` – saves files to a new `tmp/Ruby Rogues 08-15-2024/` directory.
 
 ## Development
 
