@@ -219,7 +219,7 @@ def generate_show_notes
     model: "gpt-4o",
     messages: [
       {role: "system", content: "You are a kind and helpful podcast assistant helping to take notes for the show, and extract useful information being discussed for listeners."},
-      {role: "user", content: "Transcript:\n---\n#{PodcastBuddy.current_transcript}\n---\n\nTopics:\n---\n#{PodcastBuddy.current_topics}\n---\n\nUse the above transcript and topics to create Show Notes in markdown that outline the discussion.  Extract a breif summary that describes the overall conversation, the people involved and their roles, and sentiment of the topics discussed.  Follow the summary with a list of helpful links to any libraries, products, or other resources related to the discussion. Cite sources." }
+      {role: "user", content: "Transcript:\n---\n#{PodcastBuddy.current_transcript}\n---\n\nTopics:\n---\n#{PodcastBuddy.current_topics}\n---\n\nUse the above transcript and topics to create Show Notes in markdown that outline the discussion.  Extract a breif summary that describes the overall conversation, the people involved and their roles, and sentiment of the topics discussed.  Follow the summary with a list of helpful links to any libraries, products, or other resources related to the discussion. Cite sources."}
     ],
     max_tokens: 150
   })
@@ -314,7 +314,6 @@ def wait_for_question_start
   end
 end
 
-
 # Handle Ctrl-C to generate show notes
 Signal.trap("INT") do
   puts to_human("\nShutting down streams...", :wait)
@@ -329,7 +328,7 @@ Async do |task|
 
   # Allow recording up to 2 hours, but hard-timeout so that we don't become
   # zombies.
-  task.with_timeout(60*60*2) do
+  task.with_timeout(60 * 60 * 2) do
     # Wait for shutdown sub-tasks to complete
     task.yield until @shutdown
   end
