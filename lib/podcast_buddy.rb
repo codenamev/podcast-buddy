@@ -36,12 +36,20 @@ module PodcastBuddy
     @logger = logger
   end
 
+  def self.whisper_model=(model)
+    @whisper_model = model
+  end
+
   def self.whisper_model
-    "small.en"
+    @whisper_model ||= "small.en"
   end
 
   def self.whisper_command
     "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 4 --step 0 --length 5000 --keep 500 --vad-thold 0.60 --audio-ctx 0 --keep-context -c 1"
+  end
+
+  def self.whisper_logger=(file_path)
+    @whisper_logger ||= Logger.new(file_path, "daily")
   end
 
   def self.whisper_logger
@@ -127,6 +135,11 @@ module PodcastBuddy
     SystemDependency.auto_install!(:git)
     SystemDependency.auto_install!(:sdl2)
     SystemDependency.auto_install!(:whisper)
+    SystemDependency.resolve_whisper_model(whisper_model)
+  end
+
+  def self.openai_client=(client)
+    @openai_client = client
   end
 
   def self.openai_client

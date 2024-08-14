@@ -15,6 +15,24 @@ module PodcastBuddy
       system_dependency.install unless system_dependency.installed?
     end
 
+    def self.resolve_whisper_model(model)
+      return if model_downloaded?(model)
+      download_model(model)
+    end
+
+    def self.model_downloaded?(model)
+      File.exist?(File.join(PodcastBuddy.root, "whisper.cpp", "models", "ggml-#{model}.bin"))
+    end
+
+    def self.download_model(model)
+      originating_directory = Dir.pwd
+      Dir.chdir("whisper.cpp")
+      PodcastBuddy.logger.info "Downloading GGML model: #{PodcastBuddy.whisper_model}"
+      PodcastBuddy.logger.info `bash ./models/download-ggml-model.sh #{PodcastBuddy.whisper_model}`
+    ensure
+      Dir.chdir(originating_directory)
+    end
+
     def installed?
       PodcastBuddy.logger.info "Checking for system dependency: #{name}..."
       if name.to_s == "whisper"

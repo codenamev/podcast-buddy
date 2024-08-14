@@ -14,6 +14,10 @@ OptionParser.new do |opts|
     options[:debug] = v
   end
 
+  opts.on("-w", "--whisper MODEL", "Use specific whisper model (default: small.en)") do |v|
+    options[:whisper_model] = v
+  end
+
   opts.on("-n", "--name NAME", "A name for the session to label all log files") do |v|
     options[:name] = v
   end
@@ -47,6 +51,11 @@ if options[:debug]
   PodcastBuddy.logger.level = Logger::DEBUG
 else
   PodcastBuddy.logger.level = Logger::INFO
+end
+
+if options[:whisper_model]
+  PodcastBuddy.whisper_model = options[:whisper_model]
+  PodcastBuddy.logger.info to_human("Using whisper model: #{options[:whisper_model]}", :info)
 end
 
 if options[:name]
