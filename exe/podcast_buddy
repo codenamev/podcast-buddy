@@ -4,6 +4,7 @@ require_relative "../lib/podcast_buddy"
 require "optparse"
 require "rainbow"
 require "timeout"
+require "fileutils"
 
 options = {}
 OptionParser.new do |opts|
@@ -12,7 +13,26 @@ OptionParser.new do |opts|
   opts.on("--debug", "Run in debug mode") do |v|
     options[:debug] = v
   end
+
+  opts.on("-n", "--name NAME", "A name for the session to label all log files") do |v|
+    options[:name] = v
+  end
 end.parse!
+
+def to_human(text, label = :info)
+  case label.to_sym
+  when :info
+    Rainbow(text).blue
+  when :wait
+    Rainbow(text).yellow
+  when :input
+    Rainbow(text).black.bg(:yellow)
+  when :success
+    Rainbow(text).green
+  else
+    text
+  end
+end
 
 PodcastBuddy.logger.formatter = proc do |severity, datetime, progname, msg|
   if severity.to_s == "INFO"
@@ -23,10 +43,18 @@ PodcastBuddy.logger.formatter = proc do |severity, datetime, progname, msg|
 end
 
 if options[:debug]
-  PodcastBuddy.logger.info "Turning on debug mode..."
+  PodcastBuddy.logger.info to_human("Turning on debug mode...", :info)
   PodcastBuddy.logger.level = Logger::DEBUG
 else
   PodcastBuddy.logger.level = Logger::INFO
+end
+
+if options[:name]
+  base_path = "#{PodcastBuddy.root}/tmp/#{options[:name]}"
+  FileUtils.mkdir_p base_path
+  PodcastBuddy.session = options[:name]
+  PodcastBuddy.logger.info to_human("Using custom session name: #{options[:name]}", :info)
+  PodcastBuddy.logger.info to_human("  Saving files to: #{PodcastBuddy.session}", :info)
 end
 
 PodcastBuddy.logger.info "Setting up dependencies..."
@@ -274,21 +302,6 @@ def wait_for_question_start
       PodcastBuddy.logger.info to_human("🎙️ Listening for quesiton. Press ", :wait) + to_human("Enter", :input) + to_human(" to signal the end of the question...", :wait)
       wait_for_question_end
     end
-  end
-end
-
-def to_human(text, label = :info)
-  case label.to_sym
-  when :info
-    Rainbow(text).blue
-  when :wait
-    Rainbow(text).yellow
-  when :input
-    Rainbow(text).black.bg(:yellow)
-  when :success
-    Rainbow(text).green
-  else
-    text
   end
 end
 

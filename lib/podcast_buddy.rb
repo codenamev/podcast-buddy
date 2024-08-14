@@ -20,6 +20,14 @@ module PodcastBuddy
     Dir.pwd
   end
 
+  def self.session=(name)
+    @session = "#{root}/tmp/#{name}"
+  end
+
+  def self.session
+    @session ||= "#{root}/tmp"
+  end
+
   def self.logger
     @logger ||= Logger.new($stdout, level: Logger::DEBUG)
   end
@@ -37,23 +45,39 @@ module PodcastBuddy
   end
 
   def self.whisper_logger
-    @whisper_logger ||= Logger.new("tmp/whisper.log", "daily")
+    @whisper_logger ||= Logger.new("#{session}/whisper.log", "daily")
+  end
+
+  def self.topics_log_file=(log_file_path)
+    @topics_log_file = log_file_path
   end
 
   def self.topics_log_file
-    @topics_log_file ||= "#{root}/tmp/topics-#{Time.new.strftime("%Y-%m-%d")}.log"
+    @topics_log_file ||= "#{session}/topics-#{Time.new.strftime("%Y-%m-%d")}.log"
+  end
+
+  def self.summary_log_file=(log_file_path)
+    @summary_log_file = log_file_path
   end
 
   def self.summary_log_file
-    @summary_log_file ||= "#{root}/tmp/summary-#{Time.new.strftime("%Y-%m-%d")}.log"
+    @summary_log_file ||= "#{session}/summary-#{Time.new.strftime("%Y-%m-%d")}.log"
+  end
+
+  def self.transcript_file=(file_path)
+    @transcript_file = file_path
   end
 
   def self.transcript_file
-    @transcript_file ||= "#{root}/tmp/transcript-#{Time.new.strftime("%Y-%m-%d")}.log"
+    @transcript_file ||= "#{session}/transcript-#{Time.new.strftime("%Y-%m-%d")}.log"
+  end
+
+  def self.show_notes_file=(file_path)
+    @show_notes_file = file_path
   end
 
   def self.show_notes_file
-    @show_notes_file ||= "#{root}/tmp/show-notes-#{Time.new.strftime("%Y-%m-%d")}.md"
+    @show_notes_file ||= "#{session}/show-notes-#{Time.new.strftime("%Y-%m-%d")}.md"
   end
 
   def self.current_transcript
@@ -84,8 +108,12 @@ module PodcastBuddy
     current_topics << topics
   end
 
+  def self.answer_audio_file_path=(file_path)
+    @answer_audio_file_path = file_path
+  end
+
   def self.answer_audio_file_path
-    "response.mp3"
+    @answer_audio_file_path ||= "response.mp3"
   end
 
   def self.setup
