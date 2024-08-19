@@ -116,6 +116,15 @@ module PodcastBuddy
     current_topics << topics
   end
 
+  def self.current_topics_file
+    @current_topics_file ||= "#{session}/current_topics.md"
+  end
+
+  def self.announce_topics(topics)
+    File.write(current_topics_file, topics)
+    system("bat", current_topics_file, "--language=markdown")
+  end
+
   def self.answer_audio_file_path=(file_path)
     @answer_audio_file_path = file_path
   end
@@ -135,6 +144,7 @@ module PodcastBuddy
     SystemDependency.auto_install!(:git)
     SystemDependency.auto_install!(:sdl2)
     SystemDependency.auto_install!(:whisper)
+    SystemDependency.auto_install!(:bat)
     SystemDependency.resolve_whisper_model(whisper_model)
   end
 
