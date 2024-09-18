@@ -28,23 +28,23 @@ module PodcastBuddy
     # Start the listening process
     def start
       Sync do |parent|
-        PodcastBuddy.logger.info "Listening..."
         Open3.popen3(@whisper_command) do |_stdin, stdout, stderr, _thread|
           error_log_task = parent.async { stderr.each { |line| @whisper_logger.error line } }
           output_log_task = parent.async { stdout.each { |line| @whisper_logger.debug line } }
+
+          PodcastBuddy.logger.info "Listening..."
 
           while (line = stdout.gets)
             break if @shutdown
 
             PodcastBuddy.logger.debug("Shutdown: process_audio_stream...") and break if @shutdown
-            PodcastBuddy.logger.debug("Still listening...")
 
             last_transcription_task = parent.async { process_transcription(line) }
           end
 
           error_log_task.wait
           output_log_task.wait
-          last_transcription_task.wait
+          last_transcription_task&.wait
         end
       end
     end
@@ -74,7 +74,7 @@ module PodcastBuddy
 
       latest_transcriptions = []
       latest_transcriptions << transcription_queue.pop until transcription_queue.empty?
-      @current_discussion = latest_transcriptions.join.strip.squeeze
+      @current_discussion = latest_transcriptions.join.strip
     end
 
     private

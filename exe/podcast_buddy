@@ -178,14 +178,14 @@ def think_about(text)
       max_tokens: 250
     })
     new_summary = response.dig("choices", 0, "message", "content").strip
-    PodcastBuddy.logger.info to_human("Thinking about: #{new_summary}", :info)
+    PodcastBuddy.logger.info to_human("Thoughts: #{new_summary}", :info)
     PodcastBuddy.update_summary(new_summary)
   end
 end
 
 def answer_question(question)
   Async do
-    summarize_latest if PodcastBuddy.current_summary.to_s.squeeze.empty?
+    summarize_latest if PodcastBuddy.current_summary.to_s.empty?
     latest_context = "#{PodcastBuddy.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.current_topics.split("\n").last(10)}\n---\n"
     previous_discussion = @transcriber.latest(1_000)
     PodcastBuddy.logger.info "Answering question:\n#{question}"
@@ -225,7 +225,7 @@ end
 
 # Method to generate show notes
 def generate_show_notes
-  return if PodcastBuddy.current_transcript.strip.squeeze.empty?
+  return if PodcastBuddy.current_transcript.strip.empty?
 
   response = PodcastBuddy.openai_client.chat(parameters: {
     model: "gpt-4o",
@@ -274,7 +274,7 @@ def wait_for_question_end(listener)
       sleep 0.1 and next if !listener.listening_for_question
 
       input = ""
-      Timeout.timeout(2) do
+      Timeout.timeout(5) do
         input = gets
         PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
         next unless input.to_s.include?("\n")
@@ -304,9 +304,8 @@ def wait_for_question_start(listener)
     loop do
       PodcastBuddy.logger.debug("Shutdown: wait_for_question...") and break if @shutdown
 
-      PodcastBuddy.logger.debug("Waiting for input...")
       input = ""
-      Timeout.timeout(2) do
+      Timeout.timeout(5) do
         input = gets
         PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
         listener.listen_for_question! if input.include?("\n")
@@ -353,6 +352,5 @@ Async do |task|
   periodic_summarization_task.wait
 
   PodcastBuddy.logger.info to_human("Generating show notes...", :wait)
-  #generate_show_notes
-  exit 0
+  generate_show_notes
 end
