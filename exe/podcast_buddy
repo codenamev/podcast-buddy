@@ -76,11 +76,7 @@ PodcastBuddy.openai_client
 
 # Initialize variables
 @transcriber = PodcastBuddy::Transcriber.new
-@listening_for_question = false
 @shutdown = false
-@threads = []
-@transcription_queue = Queue.new
-@question_transcript = Queue.new
 
 TOPIC_EXTRACTION_SYSTEM_PROMPT = <<~PROMPT.freeze
   As a podcast assistant, your task is to diligently extract topics related to the discussion on the show and prepare this information in an optimal way for participants to ask questions and for use in the closing show notes.
@@ -187,13 +183,11 @@ def think_about(text)
   end
 end
 
-def answer_question
+def answer_question(question)
   Async do
     summarize_latest if PodcastBuddy.current_summary.to_s.squeeze.empty?
     latest_context = "#{PodcastBuddy.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.current_topics.split("\n").last(10)}\n---\n"
     previous_discussion = @transcriber.latest(1_000)
-    question = ""
-    question << @question_transcript.pop until @question_transcript.empty?
     PodcastBuddy.logger.info "Answering question:\n#{question}"
     PodcastBuddy.logger.debug "Context:\n---#{latest_context}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"
     response = PodcastBuddy.openai_client.chat(parameters: {
@@ -229,42 +223,6 @@ def play_answer
   system("afplay #{PodcastBuddy.answer_audio_file_path}")
 end
 
-# Method to handle audio stream processing
-def process_audio_stream
-  Sync do |parent|
-    PodcastBuddy.logger.info "Buffering audio..."
-    Open3.popen3(PodcastBuddy.whisper_command) do |stdin, stdout, stderr, _thread|
-      error_log_task = parent.async { stderr.each { |line| PodcastBuddy.whisper_logger.error line } }
-      output_log_task = parent.async { stdout.each { |line| PodcastBuddy.whisper_logger.debug line } }
-
-      while (transcription = stdout.gets)
-        PodcastBuddy.logger.debug("Shutdown: process_audio_stream...") and break if @shutdown
-        PodcastBuddy.logger.debug("Still listening...")
-
-        last_transcription_task = parent.async { process_transcription(transcription) }
-      end
-
-      error_log_task.wait
-      output_log_task.wait
-      last_transcription_task.wait
-    end
-  end
-end
-
-def process_transcription(line)
-  text = @transcriber.process(line)
-  return if text.empty?
-
-  if @listening_for_question
-    PodcastBuddy.logger.info "Heard Question: #{text}"
-    @question_transcript << text
-  else
-    PodcastBuddy.logger.info "Heard: #{text}"
-    PodcastBuddy.update_transcript(text)
-    @transcription_queue << text
-  end
-end
-
 # Method to generate show notes
 def generate_show_notes
   return if PodcastBuddy.current_transcript.strip.squeeze.empty?
@@ -285,38 +243,38 @@ def generate_show_notes
 end
 
 # Periodically summarize latest transcription
-def periodic_summarization(interval = 15)
+def periodic_summarization(listener, interval = 15)
   Sync do
     loop do
       PodcastBuddy.logger.debug("Shutdown: periodic_summarization...") and break if @shutdown
 
       sleep interval
-      summarize_latest
+      summarize_latest(listener)
     rescue => e
       PodcastBuddy.logger.warn "[summarization] periodic summarization failed: #{e.message}"
     end
   end
 end
 
-def summarize_latest
-  latest_transcriptions = []
-  latest_transcriptions << @transcription_queue.pop until @transcription_queue.empty?
-  return if latest_transcriptions.join.strip.squeeze.empty?
+def summarize_latest(listener)
+  # cache it in case a subsequent audio transcript overlaps the processing here
+  current_discussion = listener.current_discussion
+  return if current_discussion.empty?
 
-  PodcastBuddy.logger.debug "[periodic summarization] Latest transcript: #{latest_transcriptions.join}"
-  extract_topics_and_summarize(latest_transcriptions.join)
+  PodcastBuddy.logger.debug "[periodic summarization] Latest transcript: #{current_discussion}"
+  extract_topics_and_summarize(current_discussion)
 end
 
-def wait_for_question_end
+def wait_for_question_end(listener)
   Sync do |parent|
     loop do
       PodcastBuddy.logger.debug("Shutdown: wait_for_question_end...") and break if @shutdown
 
       # The wait_for_question_start will signal this
-      sleep 0.1 and next if !@listening_for_question
+      sleep 0.1 and next if !listener.listening_for_question
 
       input = ""
-      Timeout.timeout(5) do
+      Timeout.timeout(2) do
         input = gets
         PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
         next unless input.to_s.include?("\n")
@@ -331,8 +289,8 @@ def wait_for_question_end
         next
       else
         PodcastBuddy.logger.info "End of question signal.  Generating answer..."
-        @listening_for_question = false
-        answer_question.wait
+        question = listener.stop_listening_for_question!
+        answer_question(question).wait
         PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
         break
       end
@@ -340,7 +298,7 @@ def wait_for_question_end
   end
 end
 
-def wait_for_question_start
+def wait_for_question_start(listener)
   Sync do |parent|
     PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
     loop do
@@ -348,21 +306,20 @@ def wait_for_question_start
 
       PodcastBuddy.logger.debug("Waiting for input...")
       input = ""
-      Timeout.timeout(5) do
+      Timeout.timeout(2) do
         input = gets
         PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
-        @question_transcript.clear
-        @listening_for_question = true if input.include?("\n")
+        listener.listen_for_question! if input.include?("\n")
       rescue Timeout::Error
         # Let the loop continue so that it can catch @shutdown periodically, or
         # capture the signal
         next
       end
 
-      next unless @listening_for_question
+      next unless listener.listening_for_question
 
       PodcastBuddy.logger.info to_human("🎙️ Listening for quesiton. Press ", :wait) + to_human("Enter", :input) + to_human(" to signal the end of the question...", :wait)
-      wait_for_question_end
+      wait_for_question_end(listener)
     end
   end
 end
@@ -375,9 +332,10 @@ end
 
 # Start audio stream processing
 Async do |task|
-  audio_input_task = task.async { process_audio_stream }
-  periodic_summarization_task = task.async { periodic_summarization(60) }
-  question_listener_task = task.async { wait_for_question_start }
+  listener = PodcastBuddy::Listener.new(transcriber: @transcriber)
+  listener_task = task.async { listener.start }
+  periodic_summarization_task = task.async { periodic_summarization(listener) }
+  question_listener_task = task.async { wait_for_question_start(listener) }
 
   # Allow recording up to 2 hours, but hard-timeout so that we don't become
   # zombies.
@@ -386,13 +344,15 @@ Async do |task|
     task.yield until @shutdown
   end
 
-  PodcastBuddy.logger.info to_human("Waiting for audio input task to shutdown...", :wait)
-  audio_input_task.wait
+  PodcastBuddy.logger.info to_human("Waiting for Listener to shutdown...", :wait)
+  listener.stop
+  listener_task.wait
   PodcastBuddy.logger.info to_human("Waiting for question listening task shutdown...", :wait)
   question_listener_task.wait
   PodcastBuddy.logger.info to_human("Waiting for periodic summarization task to shutdown...", :wait)
   periodic_summarization_task.wait
 
   PodcastBuddy.logger.info to_human("Generating show notes...", :wait)
-  generate_show_notes
+  #generate_show_notes
+  exit 0
 end
