@@ -28,6 +28,16 @@ RSpec.describe PodcastBuddy::Transcriber do
         transcriber.process(input2)
         expect(transcriber.full_transcript).to eq("Hello, world! ")
       end
+
+      it "handles overlapping" do
+        input1 = "[00:00:00.000 --> 00:00:05.000]  Hello,"
+        input2 = "[00:00:02.000 --> 00:00:07.000]  you awesome"
+        input3 = "[00:00:05.000 --> 00:00:10.000]  world!"
+        transcriber.process(input1)
+        transcriber.process(input2)
+        transcriber.process(input3)
+        expect(transcriber.full_transcript).to eq("Hello, you awesomeworld! ")
+      end
     end
 
     context "with invalid input" do

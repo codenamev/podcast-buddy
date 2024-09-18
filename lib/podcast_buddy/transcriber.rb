@@ -14,7 +14,9 @@ module PodcastBuddy
     # @return [String] cleaned transcription text
     def process(line)
       timestamp, text = parse_line(line)
-      if !text.empty? && timestamp && (timestamp.zero? || timestamp > @last_timestamp)
+      # With VAD, timestamps are irrelevant.  Leaving here in case we want to
+      # reconsider
+      if !text.empty?# && timestamp && (timestamp.zero? || timestamp > @last_timestamp)
         @full_transcript += text
         @last_timestamp = timestamp
       end
