@@ -43,19 +43,19 @@ module PodcastBuddy
   end
 
   def self.whisper_model
-    @whisper_model ||= "small.en"
+    @whisper_model ||= "small.en-q5_1"
   end
 
   def self.whisper_command
-    "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 10 --step 0 --length 5000 --keep 1000 --vad-thold 0.60 --audio-ctx 0 --keep-context -c 1"
+    "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
   end
 
   def self.whisper_logger=(file_path)
-    @whisper_logger ||= Logger.new(file_path, "daily")
+    @whisper_logger ||= Logger.new(file_path, "daily", level: Logger::DEBUG)
   end
 
   def self.whisper_logger
-    @whisper_logger ||= Logger.new("#{session}/whisper.log", "daily")
+    @whisper_logger ||= Logger.new("#{session}/whisper.log", "daily", level: Logger::DEBUG)
   end
 
   def self.topics_log_file=(log_file_path)
