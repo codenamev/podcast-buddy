@@ -12,6 +12,7 @@ require "bundler/inline"
 require_relative "podcast_buddy/version"
 require_relative "podcast_buddy/system_dependency"
 require_relative "podcast_buddy/pod_signal"
+require_relative "podcast_buddy/transcriber"
 
 module PodcastBuddy
   class Error < StandardError; end

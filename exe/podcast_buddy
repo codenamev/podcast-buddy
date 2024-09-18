@@ -75,8 +75,7 @@ PodcastBuddy.logger.info "Setup complete."
 PodcastBuddy.openai_client
 
 # Initialize variables
-@latest_transcription = ""
-@full_transcript = ""
+@transcriber = PodcastBuddy::Transcriber.new
 @listening_for_question = false
 @shutdown = false
 @threads = []
@@ -192,7 +191,7 @@ def answer_question
   Async do
     summarize_latest if PodcastBuddy.current_summary.to_s.squeeze.empty?
     latest_context = "#{PodcastBuddy.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.current_topics.split("\n").last(10)}\n---\n"
-    previous_discussion = @full_transcript.split("\n").last(25)
+    previous_discussion = @transcriber.latest(1_000)
     question = ""
     question << @question_transcript.pop until @question_transcript.empty?
     PodcastBuddy.logger.info "Answering question:\n#{question}"
@@ -253,24 +252,16 @@ def process_audio_stream
 end
 
 def process_transcription(line)
-  # Cleanup captured text from whisper
-  transcription_text = (line.scan(/\[[0-9]+.*[0-9]+\]\s?(.*)\n/) || [p])[0].to_s
-  PodcastBuddy.logger.debug "Received transcription: #{transcription_text}" if transcription_text
-  transcription_text = transcription_text.gsub("[BLANK_AUDIO]", "")
-  transcription_text = transcription_text.gsub(/\A\["\s?/, "")
-  transcription_text = transcription_text.gsub(/"\]\Z/, "")
-
-  return if transcription_text.to_s.strip.squeeze.empty?
-
-  @full_transcript += transcription_text
+  text = @transcriber.process(line)
+  return if text.empty?
 
   if @listening_for_question
-    PodcastBuddy.logger.info "Heard Question: #{transcription_text}"
-    @question_transcript << transcription_text
+    PodcastBuddy.logger.info "Heard Question: #{text}"
+    @question_transcript << text
   else
-    PodcastBuddy.logger.info "Heard: #{transcription_text}"
-    PodcastBuddy.update_transcript(transcription_text)
-    @transcription_queue << transcription_text
+    PodcastBuddy.logger.info "Heard: #{text}"
+    PodcastBuddy.update_transcript(text)
+    @transcription_queue << text
   end
 end
 
