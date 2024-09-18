@@ -46,7 +46,7 @@ module PodcastBuddy
   end
 
   def self.whisper_command
-    "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 4 --step 0 --length 5000 --keep 500 --vad-thold 0.60 --audio-ctx 0 --keep-context -c 1"
+    "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 10 --step 0 --length 5000 --keep 1000 --vad-thold 0.60 --audio-ctx 0 --keep-context -c 1"
   end
 
   def self.whisper_logger=(file_path)
