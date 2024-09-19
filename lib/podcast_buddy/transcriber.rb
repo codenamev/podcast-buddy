@@ -16,7 +16,7 @@ module PodcastBuddy
       timestamp, text = parse_line(line)
       # With VAD, timestamps are irrelevant.  Leaving here in case we want to
       # reconsider
-      if !text.empty?# && timestamp && (timestamp.zero? || timestamp > @last_timestamp)
+      if !text.empty?
         @full_transcript += text
         @last_timestamp = timestamp
       end
