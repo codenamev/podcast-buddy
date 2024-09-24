@@ -6,8 +6,7 @@ require "logger"
 require "async"
 require "async/http/faraday"
 require "rainbow"
-
-require "bundler/inline"
+require "openai"
 
 require_relative "podcast_buddy/version"
 require_relative "podcast_buddy/system_dependency"
@@ -136,13 +135,6 @@ module PodcastBuddy
   end
 
   def self.setup
-    gemfile do
-      source "https://rubygems.org"
-      gem "ruby-openai"
-    end
-
-    require "openai"
-    logger.info "Gems installed and loaded!"
     SystemDependency.auto_install!(:git)
     SystemDependency.auto_install!(:sdl2)
     SystemDependency.auto_install!(:whisper)

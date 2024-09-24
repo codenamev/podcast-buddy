@@ -35,5 +35,6 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "async"
   spec.add_dependency "async-http-faraday"
+  spec.add_dependency "ruby-openai"
   spec.add_dependency "rainbow"
 end
