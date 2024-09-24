@@ -8,6 +8,7 @@ require "async/http/faraday"
 require "rainbow"
 require "openai"
 
+require_relative "podcast_buddy/configuration"
 require_relative "podcast_buddy/version"
 require_relative "podcast_buddy/system_dependency"
 require_relative "podcast_buddy/pod_signal"
@@ -16,6 +17,17 @@ require_relative "podcast_buddy/listener"
 
 module PodcastBuddy
   class Error < StandardError; end
+
+  class << self
+    attr_reader :config
+
+    def configure
+      @config = Configuration.new
+      yield(@config) if block_given?
+    end
+  end
+
+  configure
 
   def self.root
     Dir.pwd
