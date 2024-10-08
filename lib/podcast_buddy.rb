@@ -12,6 +12,7 @@ require_relative "podcast_buddy/configuration"
 require_relative "podcast_buddy/version"
 require_relative "podcast_buddy/system_dependency"
 require_relative "podcast_buddy/pod_signal"
+require_relative "podcast_buddy/prompt"
 require_relative "podcast_buddy/session"
 require_relative "podcast_buddy/transcriber"
 require_relative "podcast_buddy/listener"
@@ -90,6 +91,26 @@ module PodcastBuddy
 
   def self.current_transcript
     File.exist?(session.transcript_log) ? File.read(session.transcript_log) : ""
+  end
+
+  def self.current_observations
+    File.exist?(session.observation_log) ? File.read(session.observation_log) : ""
+  end
+
+  def self.update_observations(text)
+    File.open(session.observation_log, "a") { |f| f.puts text }
+  end
+
+  def self.notes
+    File.exist?(session.notes_log) ? File.read(session.notes_log) : ""
+  end
+
+  def self.show_notes_path
+    session.show_notes_path
+  end
+
+  def self.update_notes(text)
+    File.open(session.notes_log, "a") { |f| f.puts text }
   end
 
   def self.update_transcript(text)

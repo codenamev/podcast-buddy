@@ -13,6 +13,14 @@ module PodcastBuddy
       FileUtils.mkdir_p(@base_path)
     end
 
+    def observation_log
+      File.join(@base_path, "observations.log")
+    end
+
+    def notes_log
+      File.join(@base_path, "notes.log")
+    end
+
     # @return [String]
     def transcript_log
       File.join(@base_path, "transcript.log")

@@ -21,6 +21,10 @@ OptionParser.new do |opts|
   opts.on("-n", "--name NAME", "A name for the session to label all log files") do |v|
     options[:name] = v
   end
+
+  opts.on("-d", "--description DESCRIPTION", "A description of the show, meeting, or general discussion") do |v|
+    options[:description] = v
+  end
 end.parse!
 
 def to_human(text, label = :info)
@@ -63,7 +67,11 @@ if options[:name]
   FileUtils.mkdir_p base_path
   PodcastBuddy.session = options[:name]
   PodcastBuddy.logger.info to_human("Using custom session name: #{options[:name]}", :info)
-  PodcastBuddy.logger.info to_human("  Saving files to: #{PodcastBuddy.session}", :info)
+  PodcastBuddy.logger.info to_human("  Saving files to: #{PodcastBuddy.session.base_path}", :info)
+end
+
+if options[:description]
+  PodcastBuddy.config.show_description = options[:description]
 end
 
 PodcastBuddy.logger.info "Setting up dependencies..."
@@ -77,6 +85,129 @@ PodcastBuddy.openai_client
 # Initialize variables
 @transcriber = PodcastBuddy::Transcriber.new
 @shutdown = false
+
+ObserverPrompt = PodcastBuddy::Prompt.new(
+  system_content: <<~PROMPT.freeze,
+    Listen to a transcript of participants having a discussion and make insightful observations that can be used to participate in the discussion upon request.
+
+    ### Key Details:
+    - Focus on identifying key themes, arguments, and perspectives within the discussion.
+    - Take note of any points of consensus or disagreement among participants.
+    - Consider the context and nuances in participants' statements to form well-rounded observations.
+
+    # Steps
+
+    1. **Listen and Analyze:**
+      - Carefully go through the transcript to understand the main points and arguments presented.
+      - Pay attention to the tone and intention of each speaker.
+
+    2. **Identify Key Themes:**
+      - Determine the central topics and themes discussed by the participants.
+      - Categorize these themes into overarching discussion points.
+
+    3. **Recognize Perspectives:**
+      - Capture the different perspectives and arguments made by participants.
+      - Document both supporting and opposing views for completeness.
+
+    4. **Evaluate Consensus and Disagreements:**
+      - Note areas where participants agree and where there is contention.
+      - Highlight particularly compelling arguments or unanswered questions.
+
+    5. **Synthesize Observations:**
+      - Formulate coherent observations based on the analyzed information.
+      - Ensure observations are relevant and add value to the ongoing discussion.
+
+    # Output Format
+
+    - Provide a structured list or brief paragraphs highlighting key observations, themes, points of consensus, and disagreements.
+    - Each observation should be concise yet informative, ideally formatted in bullet points or sections.
+
+    # Examples
+
+    **Transcript Excerpt:**
+    I believe the new policy will lead to increased productivity due to its structured approach.
+    However, the policy might limit creativity, which is critical for innovation.
+
+    **Observation for Participation:**
+    - **Theme:** Policy Impact on Productivity
+      - Observation: "There's an ongoing debate about the new policy's effect, highlighting the balance between structure and creativity. Speaker 1 notes increased productivity, while Speaker 2 raises concerns about potential impacts on creativity."
+
+    # Notes
+
+    - Remain neutral and objective in observations to ensure balance in participation.
+    - Consider the dynamics of the discussion to tailor observations appropriately.
+  PROMPT
+  user_template: <<~TEMPLATE.freeze
+    Transcript Excerpt:
+    """
+    %{transcript}
+    """
+  TEMPLATE
+)
+
+ParticipantPrompt = PodcastBuddy::Prompt.new(
+  system_content: <<~PROMPT.freeze,
+    You are an AI participant in discussions. Your task is to engage meaningfully when called upon, using the context provided. Your responses should be:
+    1. Relevant to the current discussion and overall purpose
+    2. Informed by recent observations and the latest transcript
+    3. Concise and clear
+  PROMPT
+  user_template: <<~TEMPLATE
+    Purpose of the discussion: %{purpose}
+
+    Recent observations:
+    %{recent_observations}
+
+    Latest transcript:
+    %{latest_transcript}
+
+    Question or direction:
+    %{question_or_direction}
+  TEMPLATE
+)
+
+NoteTakerPrompt = PodcastBuddy::Prompt.new(
+  system_content: <<~PROMPT.freeze,
+    You are a diligent note-taker for a discussion. Your task is to create clear, concise notes from the transcript, focusing on:
+    1. Main points and key information
+    2. Action items or decisions made
+    3. Important quotes or statements
+    4. Questions raised during the discussion
+
+    Provide bullet-point notes summarizing this segment. Skip any incomplete segment.
+  PROMPT
+  user_template: <<~TEMPLATE
+    Purpose of the discussion: %{purpose}
+
+    Transcript segment:
+    %{transcript_segment}
+  TEMPLATE
+)
+
+ReportPrompt = PodcastBuddy::Prompt.new(
+  system_content: <<~PROMPT.freeze,
+    You are tasked with creating a comprehensive report of a discussion. Your report should:
+    1. Summarize the overall discussion and key topics covered
+    2. Highlight important decisions, action items, or conclusions
+    3. Include relevant observations made during the discussion
+    4. Incorporate key points from the note-taker's notes
+    5. Provide links to supporting material, citing sources where applicable
+  PROMPT
+  user_template: <<~TEMPLATE
+    Purpose of the discussion: %{purpose}
+
+    Full transcript:
+    %{full_transcript}
+
+    Observations:
+    %{all_observations}
+
+    Note-taker's notes:
+    %{all_notes}
+
+    Generate a concise, well-structured report of the discussion, including all required elements.
+  TEMPLATE
+)
 
 TOPIC_EXTRACTION_SYSTEM_PROMPT = <<~PROMPT.freeze
   As a podcast assistant, your task is to diligently extract topics related to the discussion on the show and prepare this information in an optimal way for participants to learn more in the closing show notes.
@@ -135,8 +266,25 @@ PROMPT
 # Method to extract topics and summarize
 def extract_topics_and_summarize(text)
   Sync do |parent|
-    parent.async { update_topics(text) }
+    parent.async { take_notes(text) }
     parent.async { think_about(text) }
+  end
+end
+
+def take_notes(text)
+  PodcastBuddy.logger.debug "Taking notes on: #{text}"
+  Sync do
+    response = PodcastBuddy.openai_client.chat(parameters: {
+      model: "gpt-4o",
+      messages: NoteTakerPrompt.generate(
+        purpose: PodcastBuddy.config.show_description,
+        transcript_segment: text
+      ),
+      max_tokens: 500
+    })
+    new_notes = response.dig("choices", 0, "message", "content").strip
+    PodcastBuddy.logger.debug "Updating notes: #{new_notes}"
+    PodcastBuddy.update_notes(new_notes)
   end
 end
 
@@ -165,31 +313,29 @@ def think_about(text)
     PodcastBuddy.logger.debug "Summarizing current discussion:\n\tCurrent: #{PodcastBuddy.current_summary}\n\tLatest: #{text}\n\tSystem: #{format(DISCUSSION_PROMPT, {summary: PodcastBuddy.current_summary})}\n\tUser: #{format(DISCUSSION_USER_PROMPT, {discussion: text})}"
     response = PodcastBuddy.openai_client.chat(parameters: {
       model: "gpt-4o",
-      messages: [
-        {role: "system", content: format(DISCUSSION_PROMPT, {summary: PodcastBuddy.current_summary})},
-        {role: "user", content: format(DISCUSSION_USER_PROMPT, {discussion: text})}
-      ],
+      messages: ObserverPrompt.generate(transcript: text),
       max_tokens: 250
     })
-    new_summary = response.dig("choices", 0, "message", "content").strip
-    PodcastBuddy.logger.info to_human("Thoughts: #{new_summary}", :info)
-    PodcastBuddy.update_summary(new_summary)
+    observations = response.dig("choices", 0, "message", "content").strip
+    PodcastBuddy.logger.info to_human("Thoughts: #{observations}", :info)
+    PodcastBuddy.update_observations(observations)
   end
 end
 
 def answer_question(question)
   Async do
-    summarize_latest if PodcastBuddy.current_summary.to_s.empty?
-    latest_context = "#{PodcastBuddy.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.current_topics.split("\n").last(10)}\n---\n"
+    summarize_latest if PodcastBuddy.current_observations.to_s.empty?
     previous_discussion = @transcriber.latest(1_000)
     PodcastBuddy.logger.info "Answering question:\n#{question}"
-    PodcastBuddy.logger.debug "Context:\n---#{latest_context}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"
+    PodcastBuddy.logger.debug "Recent Observations:\n---#{PodcastBuddy.current_observations}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"
     response = PodcastBuddy.openai_client.chat(parameters: {
       model: "gpt-4o-mini",
-      messages: [
-        {role: "system", content: format(DISCUSSION_PROMPT, {summary: PodcastBuddy.current_summary})},
-        {role: "user", content: question}
-      ],
+      messages: ParticipantPrompt.generate(
+        purpose: PodcastBuddy.config.show_description,
+        recent_observations: PodcastBuddy.current_observations,
+        latest_transcript: previous_discussion,
+        question_or_direction: question
+      ),
       max_tokens: 150
     })
     answer = response.dig("choices", 0, "message", "content").strip
@@ -223,10 +369,12 @@ def generate_show_notes
 
   response = PodcastBuddy.openai_client.chat(parameters: {
     model: "gpt-4o",
-    messages: [
-      {role: "system", content: "You are a kind and helpful podcast assistant helping to take notes for the show, and extract useful information being discussed for listeners."},
-      {role: "user", content: "Transcript:\n---\n#{PodcastBuddy.current_transcript}\n---\n\nTopics:\n---\n#{PodcastBuddy.current_topics}\n---\n\nUse the above transcript and topics to create Show Notes in markdown that outline the discussion.  Extract a breif summary that describes the overall conversation, the people involved and their roles, and sentiment of the topics discussed.  Follow the summary with a list of helpful links to any libraries, products, or other resources related to the discussion. Cite sources."}
-    ]
+    messages: ReportPrompt.generate(
+      purpose: PodcastBuddy.config.show_description,
+      full_transcript: PodcastBuddy.current_transcript,
+      all_observations: PodcastBuddy.current_observations,
+      all_notes: PodcastBuddy.notes
+    )
   })
   show_notes = response.dig("choices", 0, "message", "content").strip
   File.open(PodcastBuddy.show_notes_path, "w") do |file|

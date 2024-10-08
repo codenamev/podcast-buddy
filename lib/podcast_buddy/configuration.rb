@@ -3,13 +3,14 @@
 module PodcastBuddy
   # Manages configuration for PodcastBuddy
   class Configuration
-    attr_accessor :root, :whisper_model, :logger
+    attr_accessor :root, :whisper_model, :logger, :show_description
     attr_writer :openai_client
 
     def initialize
       @root = Dir.pwd
       @whisper_model = "small.en-q5_1"
       @logger = Logger.new($stdout, level: Logger::INFO)
+      @show_description = "a podcast"
     end
 
     # @return [OpenAI::Client]
