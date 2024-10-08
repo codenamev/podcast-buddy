@@ -12,6 +12,7 @@ require_relative "podcast_buddy/configuration"
 require_relative "podcast_buddy/version"
 require_relative "podcast_buddy/system_dependency"
 require_relative "podcast_buddy/pod_signal"
+require_relative "podcast_buddy/session"
 require_relative "podcast_buddy/transcriber"
 require_relative "podcast_buddy/listener"
 
