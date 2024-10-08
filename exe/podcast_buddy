@@ -54,7 +54,7 @@ else
 end
 
 if options[:whisper_model]
-  PodcastBuddy.whisper_model = options[:whisper_model]
+  PodcastBuddy.config.whisper_model = options[:whisper_model]
   PodcastBuddy.logger.info to_human("Using whisper model: #{options[:whisper_model]}", :info)
 end
 

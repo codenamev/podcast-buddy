@@ -20,11 +20,25 @@ module PodcastBuddy
   class Error < StandardError; end
 
   class << self
-    attr_reader :config
+    def config
+      @config ||= Configuration.new
+    end
 
     def configure
       @config = Configuration.new
       yield(@config) if block_given?
+    end
+
+    def start_session(name: nil)
+      @session = Session.new(name: name)
+    end
+
+    def setup
+      SystemDependency.auto_install!(:git)
+      SystemDependency.auto_install!(:sdl2)
+      SystemDependency.auto_install!(:whisper)
+      SystemDependency.auto_install!(:bat)
+      SystemDependency.resolve_whisper_model(whisper_model)
     end
   end
 
@@ -50,16 +64,20 @@ module PodcastBuddy
     @logger = logger
   end
 
-  def self.whisper_model=(model)
-    @whisper_model = model
+  def self.openai_client
+    PodcastBuddy.config.openai_client
+  end
+
+  def self.openai_client=(client)
+    PodcastBuddy.config.openai_client = client
   end
 
   def self.whisper_model
-    @whisper_model ||= "small.en-q5_1"
+    PodcastBuddy.config.whisper_model
   end
 
   def self.whisper_command
-    "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
+    PodcastBuddy.config.whisper_command
   end
 
   def self.whisper_logger=(file_path)
