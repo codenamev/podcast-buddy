@@ -229,11 +229,11 @@ def generate_show_notes
     ]
   })
   show_notes = response.dig("choices", 0, "message", "content").strip
-  File.open(PodcastBuddy.show_notes_file, "w") do |file|
+  File.open(PodcastBuddy.show_notes_path, "w") do |file|
     file.puts show_notes
   end
 
-  PodcastBuddy.logger.info to_human("Show notes saved to: #{PodcastBuddy.show_notes_file}", :success)
+  PodcastBuddy.logger.info to_human("Show notes saved to: #{PodcastBuddy.show_notes_path}", :success)
 end
 
 # Periodically summarize latest transcription
