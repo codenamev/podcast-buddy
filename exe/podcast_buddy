@@ -134,14 +134,14 @@ PROMPT
 
 # Method to extract topics and summarize
 def extract_topics_and_summarize(text)
-  Sync do |parent|
+  Async do |parent|
     parent.async { update_topics(text) }
     parent.async { think_about(text) }
   end
 end
 
 def update_topics(text)
-  Sync do
+  Async do
     PodcastBuddy.logger.debug "Looking for topics related to: #{text}"
     PodcastBuddy.logger.debug "System: #{TOPIC_EXTRACTION_SYSTEM_PROMPT}\n\tUser: #{format(TOPIC_EXTRACTION_USER_PROMPT, {discussion: text})}"
     response = PodcastBuddy.openai_client.chat(parameters: {
@@ -161,7 +161,7 @@ def update_topics(text)
 end
 
 def think_about(text)
-  Sync do
+  Async do
     PodcastBuddy.logger.debug "Summarizing current discussion:\n\tCurrent: #{PodcastBuddy.current_summary}\n\tLatest: #{text}\n\tSystem: #{format(DISCUSSION_PROMPT, {summary: PodcastBuddy.current_summary})}\n\tUser: #{format(DISCUSSION_USER_PROMPT, {discussion: text})}"
     response = PodcastBuddy.openai_client.chat(parameters: {
       model: "gpt-4o",
@@ -177,11 +177,11 @@ def think_about(text)
   end
 end
 
-def answer_question(question)
+def answer_question(question, listener)
   Async do
-    summarize_latest if PodcastBuddy.current_summary.to_s.empty?
+    summarize_latest(listener) if PodcastBuddy.current_summary.to_s.empty?
     latest_context = "#{PodcastBuddy.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.current_topics.split("\n").last(10)}\n---\n"
-    previous_discussion = @transcriber.latest(1_000)
+    previous_discussion = listener.transcriber.latest(1_000)
     PodcastBuddy.logger.info "Answering question:\n#{question}"
     PodcastBuddy.logger.debug "Context:\n---#{latest_context}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"
     response = PodcastBuddy.openai_client.chat(parameters: {
@@ -238,7 +238,7 @@ end
 
 # Periodically summarize latest transcription
 def periodic_summarization(listener, interval = 15)
-  Sync do
+  Async do
     loop do
       PodcastBuddy.logger.debug("Shutdown: periodic_summarization...") and break if @shutdown
 
@@ -284,7 +284,7 @@ def wait_for_question_end(listener)
       else
         PodcastBuddy.logger.info "End of question signal.  Generating answer..."
         question = listener.stop_listening_for_question!
-        answer_question(question).wait
+        answer_question(question, listener).wait
         PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
         break
       end

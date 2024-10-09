@@ -2,7 +2,7 @@ module PodcastBuddy
   # Handles listening and processing of audio input
   class Listener
     # @return [Queue] queue for storing transcriptions
-    attr_reader :transcription_queue
+    attr_reader :transcription_queue, :transcriber
 
     # @return [Queue] queue for storing questions
     attr_reader :question_queue
