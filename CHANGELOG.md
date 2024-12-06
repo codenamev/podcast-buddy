@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+* Added `podcast-buddy` executable as an alternative to `podcast_buddy`
+
 * Renamed `show_notes_log` to `show_notes_path` for clarity and consistency
 * Introduced `PodcastBuddy::Session` abstraction
 * Added `PodcastBuddy::Configuration` for global settings
