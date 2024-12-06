@@ -165,8 +165,8 @@ module PodcastBuddy
         })
         new_topics = response.dig("choices", 0, "message", "content").gsub("NONE", "").strip
 
-        PodcastBuddy.announce_topics(new_topics)
-        PodcastBuddy.add_to_topics(new_topics)
+        PodcastBuddy.session.announce_topics(new_topics)
+        PodcastBuddy.session.add_to_topics(new_topics)
       end
     end
 
@@ -180,7 +180,7 @@ module PodcastBuddy
         })
         new_summary = response.dig("choices", 0, "message", "content").strip
         PodcastBuddy.logger.info to_human("Thoughts: #{new_summary}", :info)
-        PodcastBuddy.update_summary(new_summary)
+        PodcastBuddy.session.update_summary(new_summary)
       end
     end
 
@@ -239,8 +239,8 @@ module PodcastBuddy
 
     def answer_question(question, listener)
       Async do
-        summarize_latest(listener) if PodcastBuddy.current_summary.to_s.empty?
-        latest_context = "#{PodcastBuddy.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.current_topics.split("\n").last(10)}\n---\n"
+        summarize_latest(listener) if PodcastBuddy.session.current_summary.to_s.empty?
+        latest_context = "#{PodcastBuddy.session.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.session.current_topics.split("\n").last(10)}\n---\n"
         previous_discussion = listener.transcriber.latest(1_000)
         PodcastBuddy.logger.info "Answering question:\n#{question}"
         PodcastBuddy.logger.debug "Context:\n---#{latest_context}\n---\nPrevious discussion:\n---#{previous_discussion}\n---\nAnswering question:\n---#{question}\n---"

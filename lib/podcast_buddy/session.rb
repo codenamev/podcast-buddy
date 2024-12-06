@@ -42,5 +42,34 @@ module PodcastBuddy
     def answer_audio_file
       File.join(@base_path, "response.mp3")
     end
+
+    def current_transcript
+      File.exist?(transcript_log) ? File.read(transcript_log) : ""
+    end
+
+    def update_transcript(text)
+      File.open(transcript_log, "a") { |f| f.puts text }
+    end
+
+    def current_summary
+      File.exist?(summary_log) ? File.read(summary_log) : ""
+    end
+
+    def update_summary(text)
+      File.write(summary_log, text)
+    end
+
+    def current_topics
+      File.exist?(topics_log) ? File.read(topics_log) : ""
+    end
+
+    def add_to_topics(topics)
+      File.open(topics_log, "a") { |f| f.puts topics }
+    end
+
+    def announce_topics(topics)
+      File.write(topics_log, topics)
+      system("bat", topics_log, "--language=markdown")
+    end
   end
 end
