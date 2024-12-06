@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+* Refactored CLI into a dedicated class for improved maintainability
+* Moved AI prompts into configurable options
 * Added `podcast-buddy` executable as an alternative to `podcast_buddy`
 
 * Renamed `show_notes_log` to `show_notes_path` for clarity and consistency

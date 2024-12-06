@@ -8,6 +8,7 @@ require "async/http/faraday"
 require "rainbow"
 require "openai"
 
+require_relative "podcast_buddy/cli"
 require_relative "podcast_buddy/configuration"
 require_relative "podcast_buddy/version"
 require_relative "podcast_buddy/system_dependency"
