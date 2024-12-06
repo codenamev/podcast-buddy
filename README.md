@@ -55,9 +55,11 @@ Each session directory contains:
 
 ### Options
 
-**debug mode**: `podcast_buddy --debug` – shows verbose logging
-**custom whisper model**: `podcast_buddy --whisper base.en` – use any of [these available models](https://github.com/ggerganov/whisper.cpp/blob/master/models/download-ggml-model.sh#L28-L49).
-**custom session**: `podcast_buddy --name "Ruby Rogues 08-15-2024"` – saves files to a new `tmp/Ruby Rogues 08-15-2024/` directory.
+**debug mode**: `podcast-buddy --debug` – shows verbose logging
+**custom whisper model**: `podcast-buddy --whisper base.en` – use any of [these available models](https://github.com/ggerganov/whisper.cpp/blob/master/models/download-ggml-model.sh#L28-L49).
+**custom session**: `podcast-buddy --name "Ruby Rogues 08-15-2024"` – saves files to a new `tmp/Ruby Rogues 08-15-2024/` directory.
+
+Note: Both `podcast-buddy` and `podcast_buddy` commands are available and work identically.
 
 ### Configuration
 
