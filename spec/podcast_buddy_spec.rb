@@ -2,9 +2,11 @@ require "spec_helper"
 require "podcast_buddy"
 
 def reset_session!
-  File.write(File.join("spec", "fixtures", "session", "summary.log"), "Existing summary")
-  File.write(File.join("spec", "fixtures", "session", "transcript.log"), "Existing transcript")
-  File.write(File.join("spec", "fixtures", "session", "topics.log"), "Existing topics")
+  session_path = File.join("spec", "fixtures", "tmp", "session")
+  FileUtils.mkdir_p(session_path)
+  File.write(File.join(session_path, "summary.log"), "Existing summary")
+  File.write(File.join(session_path, "transcript.log"), "Existing transcript")
+  File.write(File.join(session_path, "topics.log"), "Existing topics")
   PodcastBuddy.logger = nil
   PodcastBuddy.configure do |config|
     config.root = File.join("spec", "fixtures")
@@ -122,6 +124,7 @@ RSpec.describe PodcastBuddy do
 
   describe ".whisper_logger=" do
     it "creates a new logger with the given file path" do
+      PodcastBuddy.instance_variable_set(:@whisper_logger, nil)
       expect(Logger).to receive(:new).with("whisper.log", "daily", level: Logger::DEBUG)
       PodcastBuddy.whisper_logger = "whisper.log"
     end
@@ -129,6 +132,7 @@ RSpec.describe PodcastBuddy do
 
   describe ".whisper_logger" do
     it "creates a new logger with the session whisper log" do
+      PodcastBuddy.instance_variable_set(:@whisper_logger, nil)
       expect(Logger).to receive(:new).with(session.whisper_log, "daily", level: Logger::DEBUG)
       PodcastBuddy.whisper_logger
     end

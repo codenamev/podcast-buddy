@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+* Renamed `show_notes_log` to `show_notes_path` for clarity and consistency
+* Introduced `PodcastBuddy::Session` abstraction
+* Added `PodcastBuddy::Configuration` for global settings
+* Fixed test directory structure and improved test stability
+
 ## [0.2.1] - 2024-08-13
 
 * Fixes typo in command-line help banner to reference proper podcast_buddy command

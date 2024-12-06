@@ -41,10 +41,10 @@ RSpec.describe PodcastBuddy::Session do
     end
   end
 
-  describe "#show_notes_log" do
+  describe "#show_notes_path" do
     it "returns the correct file path" do
       expected_path = File.join(session.base_path, "show-notes.md")
-      expect(session.show_notes_log).to eq(expected_path)
+      expect(session.show_notes_path).to eq(expected_path)
     end
   end
 

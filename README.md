@@ -56,6 +56,18 @@ Once you're done, simply `ctrl-c` to wrap things up.
 **custom whisper model**: `podcast_buddy --whisper base.en` – use any of [these available models](https://github.com/ggerganov/whisper.cpp/blob/master/models/download-ggml-model.sh#L28-L49).
 **custom session**: `podcast_buddy --name "Ruby Rogues 08-15-2024"` – saves files to a new `tmp/Ruby Rogues 08-15-2024/` directory.
 
+### Configuration
+
+Configure PodcastBuddy globally:
+
+```ruby
+PodcastBuddy.configure do |config|
+  config.whisper_model = "base.en"  # Choose whisper model
+  config.root = "path/to/files"     # Set root directory for files
+  config.logger = Logger.new($stdout, level: Logger::DEBUG)
+end
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
