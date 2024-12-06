@@ -66,7 +66,7 @@ module PodcastBuddy
       end
 
       PodcastBuddy.logger.formatter = proc do |severity, datetime, progname, msg|
-        severity.to_s == "INFO" ? "#{msg}\n" : "[#{severity}] #{msg}\n"
+        (severity.to_s == "INFO") ? "#{msg}\n" : "[#{severity}] #{msg}\n"
       end
     end
 
@@ -117,7 +117,7 @@ module PodcastBuddy
 
     def shutdown_tasks!
       PodcastBuddy.logger.info to_human("Waiting for Listener to shutdown...", :wait)
-      @listener.stop if @listener
+      @listener&.stop
       @tasks.each do |task|
         PodcastBuddy.logger.info to_human("Waiting for #{task.name} to shutdown...", :wait)
         task.task.wait

@@ -3,12 +3,16 @@
 module PodcastBuddy
   # Manages configuration for PodcastBuddy
   class Configuration
-    attr_accessor :root, :whisper_model, :logger,
-                :topic_extraction_system_prompt, :topic_extraction_user_prompt,
-                :discussion_system_prompt, :discussion_user_prompt
+    attr_accessor :root,
+      :whisper_model,
+      :logger,
+      :topic_extraction_system_prompt,
+      :topic_extraction_user_prompt,
+      :discussion_system_prompt,
+      :discussion_user_prompt
     attr_writer :openai_client
 
-    DEFAULT_TOPIC_EXTRACTION_SYSTEM_PROMPT = <<~PROMPT.freeze
+    DEFAULT_TOPIC_EXTRACTION_SYSTEM_PROMPT = <<~PROMPT
       As a podcast assistant, your task is to diligently extract topics related to the discussion on the show and prepare this information in an optimal way for participants to learn more in the closing show notes.
 
       To achieve this, follow these steps:
@@ -24,7 +28,7 @@ module PodcastBuddy
       - **Super Cool Topic**: Summary of Super Cool Topic
     PROMPT
 
-    DEFAULT_TOPIC_EXTRACTION_USER_PROMPT = <<~PROMPT.freeze
+    DEFAULT_TOPIC_EXTRACTION_USER_PROMPT = <<~PROMPT
       Here is a snippet from the podcast discussion for you to analyze:
       """
       %{discussion}
@@ -33,7 +37,7 @@ module PodcastBuddy
       Please extract the topics following the structure above.
     PROMPT
 
-    DEFAULT_DISCUSSION_SYSTEM_PROMPT = <<~PROMPT.freeze
+    DEFAULT_DISCUSSION_SYSTEM_PROMPT = <<~PROMPT
       As a kind and helpful podcast co-host. Your task is to keep track of the overall discussion on the show. Additionally, you must be ready to provide a concise summary of the ongoing discussion at any moment and actively participate when asked.
 
       To achieve this, follow these guidelines:
@@ -54,7 +58,7 @@ module PodcastBuddy
       Let's start with the first segment:
     PROMPT
 
-    DEFAULT_DISCUSSION_USER_PROMPT = <<~PROMPT.freeze
+    DEFAULT_DISCUSSION_USER_PROMPT = <<~PROMPT
       Segment:
       """
       %{discussion}
