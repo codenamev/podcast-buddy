@@ -41,6 +41,22 @@ bundle exec rspec
   - Better IDE support and static analysis
   - Easier debugging (stack traces are more meaningful)
 
+### Design Patterns
+- Maintain strict separation of concerns between classes:
+  - Input/Output classes should not process data (e.g., Listener shouldn't format transcripts)
+  - Processing classes should be pure and stateless where possible (e.g., Transcriber)
+  - State management should be explicit and contained (e.g., Session)
+- Use dependency injection to keep classes loosely coupled
+- Prefer small, focused classes over large, multi-purpose ones
+
+### Design Patterns
+- Maintain strict separation of concerns between classes:
+  - Input/Output classes should not process data (e.g., Listener shouldn't format transcripts)
+  - Processing classes should be pure and stateless where possible (e.g., Transcriber)
+  - State management should be explicit and contained (e.g., Session)
+- Use dependency injection to keep classes loosely coupled
+- Prefer small, focused classes over large, multi-purpose ones
+
 ### Current Refactoring Goals
 1. Extract audio processing logic from CLI into dedicated service objects
 2. Improve separation of concerns between Listener and Transcriber
