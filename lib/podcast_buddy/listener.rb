@@ -82,16 +82,16 @@ module PodcastBuddy
     # Process a single transcription line
     # @param line [String] the transcription line
     def process_transcription(line)
-      transcription_text = @transcriber.process(line)
-      return if transcription_text.empty?
+      text = @transcriber.process(line)
+      return if text.empty?
 
       if @listening_for_question
-        PodcastBuddy.logger.info "Heard Question: #{transcription_text}"
-        @question_queue << transcription_text
+        PodcastBuddy.logger.info "Heard Question: #{text}"
+        @question_queue << text
       else
-        PodcastBuddy.logger.info "Heard: #{transcription_text}"
-        PodcastBuddy.update_transcript(transcription_text)
-        @transcription_queue << transcription_text
+        PodcastBuddy.logger.info "Heard: #{text}"
+        PodcastBuddy.update_transcript(text)
+        @transcription_queue << text
       end
     end
   end
