@@ -261,19 +261,18 @@ module PodcastBuddy
     end
 
     def text_to_speech(text)
-      response = PodcastBuddy.openai_client.audio.speech(parameters: {
-        model: "tts-1",
-        input: text,
-        voice: "onyx",
-        response_format: "mp3",
-        speed: 1.0
-      })
-      File.binwrite(PodcastBuddy.answer_audio_file_path, response)
+      audio_service.text_to_speech(text, PodcastBuddy.answer_audio_file_path)
     end
 
     def play_answer
       PodcastBuddy.logger.debug("Playing answer...")
-      system("afplay #{PodcastBuddy.answer_audio_file_path}")
+      audio_service.play_audio(PodcastBuddy.answer_audio_file_path)
+    end
+
+    private
+
+    def audio_service
+      @audio_service ||= AudioService.new
     end
 
     def generate_show_notes
