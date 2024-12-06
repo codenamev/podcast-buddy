@@ -6,28 +6,54 @@ require "logger"
 require "async"
 require "async/http/faraday"
 require "rainbow"
+require "openai"
 
-require "bundler/inline"
-
+require_relative "podcast_buddy/configuration"
 require_relative "podcast_buddy/version"
 require_relative "podcast_buddy/system_dependency"
 require_relative "podcast_buddy/pod_signal"
+require_relative "podcast_buddy/session"
 require_relative "podcast_buddy/transcriber"
 require_relative "podcast_buddy/listener"
 
 module PodcastBuddy
   class Error < StandardError; end
 
+  class << self
+    def config
+      @config ||= Configuration.new
+    end
+
+    def configure
+      @config = Configuration.new
+      yield(@config) if block_given?
+    end
+
+    def start_session(name: nil)
+      @session = Session.new(name: name)
+    end
+
+    def setup
+      SystemDependency.auto_install!(:git)
+      SystemDependency.auto_install!(:sdl2)
+      SystemDependency.auto_install!(:whisper)
+      SystemDependency.auto_install!(:bat)
+      SystemDependency.resolve_whisper_model(whisper_model)
+    end
+  end
+
+  configure
+
   def self.root
     Dir.pwd
   end
 
   def self.session=(name)
-    @session = "#{root}/tmp/#{name}"
+    @session = Session.new(name: name)
   end
 
   def self.session
-    @session ||= "#{root}/tmp"
+    @session ||= Session.new
   end
 
   def self.logger
@@ -38,16 +64,20 @@ module PodcastBuddy
     @logger = logger
   end
 
-  def self.whisper_model=(model)
-    @whisper_model = model
+  def self.openai_client
+    PodcastBuddy.config.openai_client
+  end
+
+  def self.openai_client=(client)
+    PodcastBuddy.config.openai_client = client
   end
 
   def self.whisper_model
-    @whisper_model ||= "small.en-q5_1"
+    PodcastBuddy.config.whisper_model
   end
 
   def self.whisper_command
-    "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{PodcastBuddy.whisper_model}.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
+    PodcastBuddy.config.whisper_command
   end
 
   def self.whisper_logger=(file_path)
@@ -55,108 +85,39 @@ module PodcastBuddy
   end
 
   def self.whisper_logger
-    @whisper_logger ||= Logger.new("#{session}/whisper.log", "daily", level: Logger::DEBUG)
-  end
-
-  def self.topics_log_file=(log_file_path)
-    @topics_log_file = log_file_path
-  end
-
-  def self.topics_log_file
-    @topics_log_file ||= "#{session}/topics-#{Time.new.strftime("%Y-%m-%d")}.log"
-  end
-
-  def self.summary_log_file=(log_file_path)
-    @summary_log_file = log_file_path
-  end
-
-  def self.summary_log_file
-    @summary_log_file ||= "#{session}/summary-#{Time.new.strftime("%Y-%m-%d")}.log"
-  end
-
-  def self.transcript_file=(file_path)
-    @transcript_file = file_path
-  end
-
-  def self.transcript_file
-    @transcript_file ||= "#{session}/transcript-#{Time.new.strftime("%Y-%m-%d")}.log"
-  end
-
-  def self.show_notes_file=(file_path)
-    @show_notes_file = file_path
-  end
-
-  def self.show_notes_file
-    @show_notes_file ||= "#{session}/show-notes-#{Time.new.strftime("%Y-%m-%d")}.md"
+    @whisper_logger ||= Logger.new(session.whisper_log, "daily", level: Logger::DEBUG)
   end
 
   def self.current_transcript
-    @current_transcript ||= File.exist?(transcript_file) ? File.read(transcript_file) : ""
+    File.exist?(session.transcript_log) ? File.read(session.transcript_log) : ""
   end
 
   def self.update_transcript(text)
-    File.open(transcript_file, "a") { |f| f.puts text }
-    current_transcript << text
+    File.open(session.transcript_log, "a") { |f| f.puts text }
   end
 
   def self.current_summary
-    @current_summary ||= File.exist?(summary_log_file) ? File.read(summary_log_file) : ""
+    File.exist?(session.summary_log) ? File.read(session.summary_log) : ""
   end
 
   def self.update_summary(text)
-    @current_summary = text
-    File.write(summary_log_file, text)
-    @current_summary
+    File.write(session.summary_log, text)
   end
 
   def self.current_topics
-    @current_topics ||= File.exist?(topics_log_file) ? File.read(topics_log_file) : ""
+    File.exist?(session.topics_log) ? File.read(session.topics_log) : ""
   end
 
   def self.add_to_topics(topics)
-    File.open(topics_log_file, "a") { |f| f.puts topics }
-    current_topics << topics
-  end
-
-  def self.current_topics_file
-    @current_topics_file ||= "#{session}/current_topics.md"
+    File.open(session.topics_log, "a") { |f| f.puts topics }
   end
 
   def self.announce_topics(topics)
-    File.write(current_topics_file, topics)
-    system("bat", current_topics_file, "--language=markdown")
-  end
-
-  def self.answer_audio_file_path=(file_path)
-    @answer_audio_file_path = file_path
+    File.write(session.topics_log, topics)
+    system("bat", session.topics_log, "--language=markdown")
   end
 
   def self.answer_audio_file_path
-    @answer_audio_file_path ||= "response.mp3"
-  end
-
-  def self.setup
-    gemfile do
-      source "https://rubygems.org"
-      gem "ruby-openai"
-    end
-
-    require "openai"
-    logger.info "Gems installed and loaded!"
-    SystemDependency.auto_install!(:git)
-    SystemDependency.auto_install!(:sdl2)
-    SystemDependency.auto_install!(:whisper)
-    SystemDependency.auto_install!(:bat)
-    SystemDependency.resolve_whisper_model(whisper_model)
-  end
-
-  def self.openai_client=(client)
-    @openai_client = client
-  end
-
-  def self.openai_client
-    raise Error, "Please set an OPENAI_ACCESS_TOKEN environment variable." if ENV["OPENAI_ACCESS_TOKEN"].to_s.strip.squeeze.empty?
-
-    @openai_client ||= OpenAI::Client.new(access_token: ENV["OPENAI_ACCESS_TOKEN"], log_errors: true)
+    session.answer_audio_file
   end
 end

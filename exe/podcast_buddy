@@ -54,7 +54,7 @@ else
 end
 
 if options[:whisper_model]
-  PodcastBuddy.whisper_model = options[:whisper_model]
+  PodcastBuddy.config.whisper_model = options[:whisper_model]
   PodcastBuddy.logger.info to_human("Using whisper model: #{options[:whisper_model]}", :info)
 end
 
@@ -229,11 +229,11 @@ def generate_show_notes
     ]
   })
   show_notes = response.dig("choices", 0, "message", "content").strip
-  File.open(PodcastBuddy.show_notes_file, "w") do |file|
+  File.open(PodcastBuddy.session.show_notes_path, "w") do |file|
     file.puts show_notes
   end
 
-  PodcastBuddy.logger.info to_human("Show notes saved to: #{PodcastBuddy.show_notes_file}", :success)
+  PodcastBuddy.logger.info to_human("Show notes saved to: #{PodcastBuddy.session.show_notes_path}", :success)
 end
 
 # Periodically summarize latest transcription
@@ -260,7 +260,7 @@ def summarize_latest(listener)
 end
 
 def wait_for_question_end(listener)
-  Sync do |parent|
+  Async do |parent|
     loop do
       PodcastBuddy.logger.debug("Shutdown: wait_for_question_end...") and break if @shutdown
 
@@ -293,7 +293,7 @@ def wait_for_question_end(listener)
 end
 
 def wait_for_question_start(listener)
-  Sync do |parent|
+  Async do |parent|
     PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
     loop do
       PodcastBuddy.logger.debug("Shutdown: wait_for_question...") and break if @shutdown
@@ -324,7 +324,7 @@ Signal.trap("INT") do
 end
 
 # Start audio stream processing
-Async do |task|
+Sync do |task|
   listener = PodcastBuddy::Listener.new(transcriber: @transcriber)
   listener_task = task.async { listener.start }
   periodic_summarization_task = task.async { periodic_summarization(listener) }
