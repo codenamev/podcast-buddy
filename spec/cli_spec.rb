@@ -26,7 +26,7 @@ RSpec.describe PodcastBuddy::CLI do
     before do
       allow(PodcastBuddy).to receive(:logger).and_return(Logger.new(nil))
       allow(PodcastBuddy).to receive(:setup)
-      allow(PodcastBuddy).to receive(:openai_client)
+      allow(PodcastBuddy).to receive(:openai_client).and_return(double(chat: {"choices" => [{"message" => {"content" => "test"}}]}))
     end
 
     it "configures logger and session" do

@@ -10,6 +10,7 @@ Build a Ruby gem that provides an AI-powered podcast co-host, focusing on clean 
 - Dependency Injection: Prefer injecting dependencies over hard-coding them
 - Configuration over Convention: Make behavior configurable when reasonable
 - Test-Driven Development: Write specs first, then implement
+- Minimal Refactoring: Focus on core architectural improvements first, tackle one concern at a time
 
 ### Class Responsibilities
 - `PodcastBuddy` module: Configuration and dependency injection only
@@ -33,6 +34,12 @@ bundle exec rspec
 - Prefer composition over inheritance
 - Keep methods under 15 lines
 - Keep classes under 100 lines
+- Use Ruby's built-in tools (e.g., Forwardable) over custom implementations
+- Prefer explicit delegation over method_missing for:
+  - Better performance (no method lookup overhead)
+  - Clearer intent (explicitly states which methods are delegated)
+  - Better IDE support and static analysis
+  - Easier debugging (stack traces are more meaningful)
 
 ### Current Refactoring Goals
 1. Extract audio processing logic from CLI into dedicated service objects
