@@ -73,4 +73,60 @@ RSpec.describe PodcastBuddy::Configuration do
       expect(config.whisper_command).to eq(expected_command)
     end
   end
+
+  describe "prompt methods" do
+    describe "#topic_extraction_system_prompt" do
+      it "returns a string with instructions for topic extraction" do
+        expect(config.topic_extraction_system_prompt).to be_a(String)
+        expect(config.topic_extraction_system_prompt).to include("As a podcast assistant")
+        expect(config.topic_extraction_system_prompt).to include("Example Structure:")
+      end
+
+      it "allows overriding via configuration" do
+        custom_prompt = "Custom system prompt"
+        PodcastBuddy.configure { |c| c.topic_extraction_system_prompt = custom_prompt }
+        expect(PodcastBuddy.config.topic_extraction_system_prompt).to eq(custom_prompt)
+      end
+    end
+
+    describe "#topic_extraction_user_prompt" do
+      it "returns a string with placeholders for discussion content" do
+        expect(config.topic_extraction_user_prompt).to be_a(String)
+        expect(config.topic_extraction_user_prompt).to include("%{discussion}")
+      end
+
+      it "allows overriding via configuration" do
+        custom_prompt = "Custom user prompt with %{discussion}"
+        PodcastBuddy.configure { |c| c.topic_extraction_user_prompt = custom_prompt }
+        expect(PodcastBuddy.config.topic_extraction_user_prompt).to eq(custom_prompt)
+      end
+    end
+
+    describe "#discussion_system_prompt" do
+      it "returns a string with co-host instructions" do
+        expect(config.discussion_system_prompt).to be_a(String)
+        expect(config.discussion_system_prompt).to include("As a kind and helpful podcast co-host")
+        expect(config.discussion_system_prompt).to include("%{summary}")
+      end
+
+      it "allows overriding via configuration" do
+        custom_prompt = "Custom system prompt with %{summary}"
+        PodcastBuddy.configure { |c| c.discussion_system_prompt = custom_prompt }
+        expect(PodcastBuddy.config.discussion_system_prompt).to eq(custom_prompt)
+      end
+    end
+
+    describe "#discussion_user_prompt" do
+      it "returns a string with placeholders for discussion content" do
+        expect(config.discussion_user_prompt).to be_a(String)
+        expect(config.discussion_user_prompt).to include("%{discussion}")
+      end
+
+      it "allows overriding via configuration" do
+        custom_prompt = "Custom user prompt with %{discussion}"
+        PodcastBuddy.configure { |c| c.discussion_user_prompt = custom_prompt }
+        expect(PodcastBuddy.config.discussion_user_prompt).to eq(custom_prompt)
+      end
+    end
+  end
 end

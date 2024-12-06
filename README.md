@@ -67,12 +67,28 @@ Configure PodcastBuddy globally:
 
 ```ruby
 PodcastBuddy.configure do |config|
+  # Basic settings
   config.whisper_model = "base.en"  # Choose whisper model
   config.root = "path/to/files"     # Set root directory for files
   config.logger = Logger.new($stdout, level: Logger::DEBUG)
   config.openai_client = OpenAI::Client.new(access_token: ENV["OPENAI_ACCESS_TOKEN"]) # Optional: custom OpenAI client
+  
+  # AI Prompts (optional)
+  config.topic_extraction_system_prompt = "Custom prompt for topic extraction..."
+  config.topic_extraction_user_prompt = "Custom prompt for user topics..."
+  config.discussion_system_prompt = "Custom prompt for discussion..."
+  config.discussion_user_prompt = "Custom prompt for user discussion..."
 end
 ```
+
+The AI prompts are used to customize how PodcastBuddy interacts during the recording:
+
+- `topic_extraction_system_prompt`: Guides how topics are extracted from discussions
+- `topic_extraction_user_prompt`: Template for processing user's discussion into topics
+- `discussion_system_prompt`: Sets the AI's role and behavior during discussions
+- `discussion_user_prompt`: Template for processing ongoing discussions
+
+Default prompts are provided but can be customized for specific needs.
 
 ### Sessions
 
