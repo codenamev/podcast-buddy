@@ -42,13 +42,16 @@ your Buddy will answer using the system output (via `afplay`).
 
 Once you're done, simply `ctrl-c` to wrap things up.
 
-### Helpful files logged during your session with Buddy
+### Session Files
 
-1. Your full transcript is stored in `tmp/transcript-%Y-%m-%d.log`.
-2. A summarization of the discussion is stored in `tmp/summary-%Y-%m-%d.log`.
-3. A list of topics extracted from the discussion is stored in `tmp/topics-%Y-%m-%d.log`.
-4. The Show Notes are stored in `tmp/show-notes-%Y-%m-%d.log`.
-5. The raw whisper logs are stored in `tmp/whisper.log`.
+Each session directory contains:
+
+1. `transcript.log` - Full transcript of the discussion
+2. `summary.log` - Summarization of the discussion
+3. `topics.log` - List of topics extracted from the discussion
+4. `show-notes.md` - Generated show notes in markdown format
+5. `whisper.log` - Raw whisper transcription logs
+6. `response.mp3` - Latest AI response audio file
 
 ### Options
 
@@ -65,8 +68,21 @@ PodcastBuddy.configure do |config|
   config.whisper_model = "base.en"  # Choose whisper model
   config.root = "path/to/files"     # Set root directory for files
   config.logger = Logger.new($stdout, level: Logger::DEBUG)
+  config.openai_client = OpenAI::Client.new(access_token: ENV["OPENAI_ACCESS_TOKEN"]) # Optional: custom OpenAI client
 end
 ```
+
+### Sessions
+
+PodcastBuddy organizes recordings into sessions. Each session has its own directory containing all related files.
+
+To start a named session:
+
+```bash
+podcast-buddy --name "My Awesome Podcast Episode 1"
+```
+
+This creates a new directory at `tmp/My Awesome Podcast Episode 1/` containing all session files.
 
 ## Development
 
