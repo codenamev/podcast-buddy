@@ -89,36 +89,35 @@ module PodcastBuddy
     @whisper_logger ||= Logger.new(session.whisper_log, "daily", level: Logger::DEBUG)
   end
 
+  def self.answer_audio_file_path
+    session.answer_audio_file
+  end
+
   def self.current_transcript
-    File.exist?(session.transcript_log) ? File.read(session.transcript_log) : ""
+    session.current_transcript
   end
 
   def self.update_transcript(text)
-    File.open(session.transcript_log, "a") { |f| f.puts text }
+    session.update_transcript(text)
   end
 
   def self.current_summary
-    File.exist?(session.summary_log) ? File.read(session.summary_log) : ""
+    session.current_summary
   end
 
   def self.update_summary(text)
-    File.write(session.summary_log, text)
+    session.update_summary(text)
   end
 
   def self.current_topics
-    File.exist?(session.topics_log) ? File.read(session.topics_log) : ""
+    session.current_topics
   end
 
   def self.add_to_topics(topics)
-    File.open(session.topics_log, "a") { |f| f.puts topics }
+    session.add_to_topics(topics)
   end
 
   def self.announce_topics(topics)
-    File.write(session.topics_log, topics)
-    system("bat", session.topics_log, "--language=markdown")
-  end
-
-  def self.answer_audio_file_path
-    session.answer_audio_file
+    session.announce_topics(topics)
   end
 end

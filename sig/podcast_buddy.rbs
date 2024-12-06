@@ -1,4 +1,21 @@
 module PodcastBuddy
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  # Session management
+  def self.session: -> Session
+  def self.session=: (String) -> Session
+  def self.start_session: (?name: String?) -> Session
+
+  # Configuration
+  def self.config: -> Configuration
+  def self.configure: () { (Configuration) -> void } -> void
+
+  # File management delegated to Session
+  def self.current_transcript: -> String
+  def self.update_transcript: (String) -> void
+  def self.current_summary: -> String
+  def self.update_summary: (String) -> void
+  def self.current_topics: -> String
+  def self.add_to_topics: (String) -> void
+  def self.announce_topics: (String) -> void
 end

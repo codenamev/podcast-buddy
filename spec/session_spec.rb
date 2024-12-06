@@ -61,4 +61,100 @@ RSpec.describe PodcastBuddy::Session do
       expect(session.answer_audio_file).to eq(expected_path)
     end
   end
+
+  describe "#current_transcript" do
+    context "when transcript file exists" do
+      before { File.write(session.transcript_log, "Test transcript") }
+      after { FileUtils.rm_f(session.transcript_log) }
+
+      it "returns the content of the transcript file" do
+        expect(session.current_transcript).to eq("Test transcript")
+      end
+    end
+
+    context "when transcript file does not exist" do
+      before { FileUtils.rm_f(session.transcript_log) }
+
+      it "returns an empty string" do
+        expect(session.current_transcript).to eq("")
+      end
+    end
+  end
+
+  describe "#update_transcript" do
+    after { FileUtils.rm_f(session.transcript_log) }
+
+    it "appends text to the transcript file" do
+      session.update_transcript("First line")
+      session.update_transcript("Second line")
+      expect(File.read(session.transcript_log)).to include("First line", "Second line")
+    end
+  end
+
+  describe "#current_summary" do
+    context "when summary file exists" do
+      before { File.write(session.summary_log, "Test summary") }
+      after { FileUtils.rm_f(session.summary_log) }
+
+      it "returns the content of the summary file" do
+        expect(session.current_summary).to eq("Test summary")
+      end
+    end
+
+    context "when summary file does not exist" do
+      before { FileUtils.rm_f(session.summary_log) }
+
+      it "returns an empty string" do
+        expect(session.current_summary).to eq("")
+      end
+    end
+  end
+
+  describe "#update_summary" do
+    after { FileUtils.rm_f(session.summary_log) }
+
+    it "writes text to the summary file" do
+      session.update_summary("New summary")
+      expect(File.read(session.summary_log)).to eq("New summary")
+    end
+  end
+
+  describe "#current_topics" do
+    context "when topics file exists" do
+      before { File.write(session.topics_log, "Test topics") }
+      after { FileUtils.rm_f(session.topics_log) }
+
+      it "returns the content of the topics file" do
+        expect(session.current_topics).to eq("Test topics")
+      end
+    end
+
+    context "when topics file does not exist" do
+      before { FileUtils.rm_f(session.topics_log) }
+
+      it "returns an empty string" do
+        expect(session.current_topics).to eq("")
+      end
+    end
+  end
+
+  describe "#add_to_topics" do
+    after { FileUtils.rm_f(session.topics_log) }
+
+    it "appends topics to the topics file" do
+      session.add_to_topics("First topic")
+      session.add_to_topics("Second topic")
+      expect(File.read(session.topics_log)).to include("First topic", "Second topic")
+    end
+  end
+
+  describe "#announce_topics" do
+    after { FileUtils.rm_f(session.topics_log) }
+
+    it "writes topics to the file and displays them" do
+      expect(session).to receive(:system).with("bat", session.topics_log, "--language=markdown")
+      session.announce_topics("New topics")
+      expect(File.read(session.topics_log)).to eq("New topics")
+    end
+  end
 end

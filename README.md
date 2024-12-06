@@ -53,6 +53,8 @@ Each session directory contains:
 5. `whisper.log` - Raw whisper transcription logs
 6. `response.mp3` - Latest AI response audio file
 
+Session files are managed by the `PodcastBuddy::Session` class. Each session maintains its own set of files in a timestamped directory (or custom named directory if specified with `--name`).
+
 ### Options
 
 **debug mode**: `podcast-buddy --debug` – shows verbose logging
@@ -100,7 +102,7 @@ To start a named session:
 podcast-buddy --name "My Awesome Podcast Episode 1"
 ```
 
-This creates a new directory at `tmp/My Awesome Podcast Episode 1/` containing all session files.
+This creates a new directory at `tmp/My Awesome Podcast Episode 1/` containing all session files. If no name is provided, a timestamped directory is created automatically.
 
 ## Development
 

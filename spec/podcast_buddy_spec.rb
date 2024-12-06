@@ -231,13 +231,13 @@ RSpec.describe PodcastBuddy do
     before { allow(session).to receive(:base_path).and_return(File.join("fixtures", "session")) }
     it "writes the topics to the topics file" do
       expect(File).to receive(:write).with(session.topics_log, "Announced topics")
-      allow(PodcastBuddy).to receive(:system)
+      allow(session).to receive(:system)
       PodcastBuddy.announce_topics("Announced topics")
     end
 
     it "displays the topics using bat" do
       allow(File).to receive(:write)
-      expect(PodcastBuddy).to receive(:system).with("bat", session.topics_log, "--language=markdown")
+      expect(session).to receive(:system).with("bat", session.topics_log, "--language=markdown")
       PodcastBuddy.announce_topics("Announced topics")
     end
   end
