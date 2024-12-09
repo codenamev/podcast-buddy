@@ -167,6 +167,8 @@ module PodcastBuddy
 
         PodcastBuddy.session.announce_topics(new_topics)
         PodcastBuddy.session.add_to_topics(new_topics)
+      rescue => e
+        PodcastBuddy.logger.error "Failed to update topics: #{e.message}"
       end
     end
 
@@ -181,6 +183,8 @@ module PodcastBuddy
         new_summary = response.dig("choices", 0, "message", "content").strip
         PodcastBuddy.logger.info to_human("Thoughts: #{new_summary}", :info)
         PodcastBuddy.session.update_summary(new_summary)
+      rescue => e
+        PodcastBuddy.logger.error "Failed to summarize discussion: #{e.message}"
       end
     end
 
