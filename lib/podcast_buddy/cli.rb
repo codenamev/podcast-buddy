@@ -17,7 +17,7 @@ module PodcastBuddy
   #   cli = PodcastBuddy::CLI.new(["--debug", "-n", "my-podcast"])
   #   cli.run
   class CLI
-    LabeledTask = Struct.new(:name, :task, keyword_init: true)
+    NamedTask = Struct.new(:name, :task, keyword_init: true)
 
     def initialize(argv)
       @options = parse_options(argv)
@@ -99,9 +99,9 @@ module PodcastBuddy
         periodic_summarization_task = task.async { periodic_summarization(@listener) }
         question_listener_task = task.async { wait_for_question_start(@listener) }
         @tasks = [
-          LabeledTask.new(name: "Listener", task: listener_task),
-          LabeledTask.new(name: "Periodic Summarizer", task: periodic_summarization_task),
-          LabeledTask.new(name: "question listener", task: question_listener_task)
+          NamedTask.new(name: "Listener", task: listener_task),
+          NamedTask.new(name: "Periodic Summarizer", task: periodic_summarization_task),
+          NamedTask.new(name: "question listener", task: question_listener_task)
         ]
 
         task.with_timeout(60 * 60 * 2) do
