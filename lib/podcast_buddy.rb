@@ -97,8 +97,13 @@ module PodcastBuddy
   # Delegate session methods
   class << self
     extend Forwardable
-    def_delegators :session, :current_transcript, :update_transcript,
-                            :current_summary, :update_summary,
-                            :current_topics, :add_to_topics, :announce_topics
+    def_delegators :session,
+      :current_transcript,
+      :update_transcript,
+      :current_summary,
+      :update_summary,
+      :current_topics,
+      :add_to_topics,
+      :announce_topics
   end
 end

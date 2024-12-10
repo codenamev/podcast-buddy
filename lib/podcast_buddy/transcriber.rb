@@ -18,7 +18,7 @@ module PodcastBuddy
 
       @full_transcript += text
       @last_timestamp = timestamp
-      
+
       format_transcription(text)
     end
 
