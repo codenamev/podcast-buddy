@@ -16,6 +16,7 @@ require_relative "podcast_buddy/pod_signal"
 require_relative "podcast_buddy/session"
 require_relative "podcast_buddy/transcriber"
 require_relative "podcast_buddy/listener"
+require_relative "podcast_buddy/audio_service"
 
 module PodcastBuddy
   class Error < StandardError; end
@@ -93,31 +94,16 @@ module PodcastBuddy
     session.answer_audio_file
   end
 
-  def self.current_transcript
-    session.current_transcript
-  end
-
-  def self.update_transcript(text)
-    session.update_transcript(text)
-  end
-
-  def self.current_summary
-    session.current_summary
-  end
-
-  def self.update_summary(text)
-    session.update_summary(text)
-  end
-
-  def self.current_topics
-    session.current_topics
-  end
-
-  def self.add_to_topics(topics)
-    session.add_to_topics(topics)
-  end
-
-  def self.announce_topics(topics)
-    session.announce_topics(topics)
+  # Delegate session methods
+  class << self
+    extend Forwardable
+    def_delegators :session,
+      :current_transcript,
+      :update_transcript,
+      :current_summary,
+      :update_summary,
+      :current_topics,
+      :add_to_topics,
+      :announce_topics
   end
 end

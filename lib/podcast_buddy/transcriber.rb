@@ -14,13 +14,12 @@ module PodcastBuddy
     # @return [String] cleaned transcription text
     def process(line)
       timestamp, text = parse_line(line)
-      # With VAD, timestamps are irrelevant.  Leaving here in case we want to
-      # reconsider
-      if !text.empty?
-        @full_transcript += text
-        @last_timestamp = timestamp
-      end
-      text
+      return "" if text.empty?
+
+      @full_transcript += text
+      @last_timestamp = timestamp
+
+      format_transcription(text)
     end
 
     # Get the latest portion of the transcript
@@ -28,6 +27,12 @@ module PodcastBuddy
     # @return [String] latest portion of the transcript
     def latest(limit = 200)
       @full_transcript[[@full_transcript.length - limit, 0].max, limit] || raise(ArgumentError, "negative limit")
+    end
+
+    private
+
+    def format_transcription(text)
+      text.strip + " "
     end
 
     private

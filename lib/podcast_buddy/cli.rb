@@ -17,7 +17,7 @@ module PodcastBuddy
   #   cli = PodcastBuddy::CLI.new(["--debug", "-n", "my-podcast"])
   #   cli.run
   class CLI
-    LabeledTask = Struct.new(:name, :task, keyword_init: true)
+    NamedTask = Struct.new(:name, :task, keyword_init: true)
 
     def initialize(argv)
       @options = parse_options(argv)
@@ -99,9 +99,9 @@ module PodcastBuddy
         periodic_summarization_task = task.async { periodic_summarization(@listener) }
         question_listener_task = task.async { wait_for_question_start(@listener) }
         @tasks = [
-          LabeledTask.new(name: "Listener", task: listener_task),
-          LabeledTask.new(name: "Periodic Summarizer", task: periodic_summarization_task),
-          LabeledTask.new(name: "question listener", task: question_listener_task)
+          NamedTask.new(name: "Listener", task: listener_task),
+          NamedTask.new(name: "Periodic Summarizer", task: periodic_summarization_task),
+          NamedTask.new(name: "question listener", task: question_listener_task)
         ]
 
         task.with_timeout(60 * 60 * 2) do
@@ -167,6 +167,8 @@ module PodcastBuddy
 
         PodcastBuddy.session.announce_topics(new_topics)
         PodcastBuddy.session.add_to_topics(new_topics)
+      rescue => e
+        PodcastBuddy.logger.error "Failed to update topics: #{e.message}"
       end
     end
 
@@ -181,6 +183,8 @@ module PodcastBuddy
         new_summary = response.dig("choices", 0, "message", "content").strip
         PodcastBuddy.logger.info to_human("Thoughts: #{new_summary}", :info)
         PodcastBuddy.session.update_summary(new_summary)
+      rescue => e
+        PodcastBuddy.logger.error "Failed to summarize discussion: #{e.message}"
       end
     end
 
@@ -261,19 +265,18 @@ module PodcastBuddy
     end
 
     def text_to_speech(text)
-      response = PodcastBuddy.openai_client.audio.speech(parameters: {
-        model: "tts-1",
-        input: text,
-        voice: "onyx",
-        response_format: "mp3",
-        speed: 1.0
-      })
-      File.binwrite(PodcastBuddy.answer_audio_file_path, response)
+      audio_service.text_to_speech(text, PodcastBuddy.answer_audio_file_path)
     end
 
     def play_answer
       PodcastBuddy.logger.debug("Playing answer...")
-      system("afplay #{PodcastBuddy.answer_audio_file_path}")
+      audio_service.play_audio(PodcastBuddy.answer_audio_file_path)
+    end
+
+    private
+
+    def audio_service
+      @audio_service ||= AudioService.new
     end
 
     def generate_show_notes
