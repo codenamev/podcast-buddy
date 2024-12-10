@@ -17,12 +17,10 @@ module PodcastBuddy
   #   cli = PodcastBuddy::CLI.new(["--debug", "-n", "my-podcast"])
   #   cli.run
   class CLI
-    NamedTask = Struct.new(:name, :task, keyword_init: true)
-
     def initialize(argv)
       @options = parse_options(argv)
       @tasks = []
-      @listener = nil
+      @show_assistant = PodcastBuddy::ShowAssistant.new
     end
 
     def run
@@ -94,14 +92,11 @@ module PodcastBuddy
 
     def start_recording
       Sync do |task|
-        @listener = PodcastBuddy::Listener.new(transcriber: PodcastBuddy::Transcriber.new)
-        listener_task = task.async { @listener.start }
-        periodic_summarization_task = task.async { periodic_summarization(@listener) }
-        question_listener_task = task.async { wait_for_question_start(@listener) }
+        show_assistant_task = task.async { @show_assistant.start }
+        question_listener_task = task.async { wait_for_question_start(@show_assistant.listener) }
         @tasks = [
-          NamedTask.new(name: "Listener", task: listener_task),
-          NamedTask.new(name: "Periodic Summarizer", task: periodic_summarization_task),
-          NamedTask.new(name: "question listener", task: question_listener_task)
+          PodcastBuddy::NamedTask.new(name: "Show Assistant", task: @show_assistant_task),
+          PodcastBuddy::NamedTask.new(name: "Question Listener", task: question_listener_task)
         ]
 
         task.with_timeout(60 * 60 * 2) do
@@ -116,76 +111,14 @@ module PodcastBuddy
     end
 
     def shutdown_tasks!
-      PodcastBuddy.logger.info to_human("Waiting for Listener to shutdown...", :wait)
-      @listener&.stop
+      @show_assistant.stop
       @tasks.each do |task|
         PodcastBuddy.logger.info to_human("Waiting for #{task.name} to shutdown...", :wait)
-        task.task.wait
+        task&.task&.wait
       end
 
       PodcastBuddy.logger.info to_human("Generating show notes...", :wait)
-      generate_show_notes
-    end
-
-    def periodic_summarization(listener, interval = 15)
-      Async do
-        loop do
-          PodcastBuddy.logger.debug("Shutdown: periodic_summarization...") and break if @shutdown
-
-          sleep interval
-          summarize_latest(listener)
-        rescue => e
-          PodcastBuddy.logger.warn "[summarization] periodic summarization failed: #{e.message}"
-        end
-      end
-    end
-
-    def summarize_latest(listener)
-      current_discussion = listener.current_discussion
-      return if current_discussion.empty?
-
-      PodcastBuddy.logger.debug "[periodic summarization] Latest transcript: #{current_discussion}"
-      extract_topics_and_summarize(current_discussion)
-    end
-
-    def extract_topics_and_summarize(text)
-      Async do |parent|
-        parent.async { update_topics(text) }
-        parent.async { think_about(text) }
-      end
-    end
-
-    def update_topics(text)
-      Async do
-        PodcastBuddy.logger.debug "Looking for topics related to: #{text}"
-        response = PodcastBuddy.openai_client.chat(parameters: {
-          model: "gpt-4o-mini",
-          messages: topic_extraction_messages(text),
-          max_tokens: 500
-        })
-        new_topics = response.dig("choices", 0, "message", "content").gsub("NONE", "").strip
-
-        PodcastBuddy.session.announce_topics(new_topics)
-        PodcastBuddy.session.add_to_topics(new_topics)
-      rescue => e
-        PodcastBuddy.logger.error "Failed to update topics: #{e.message}"
-      end
-    end
-
-    def think_about(text)
-      Async do
-        PodcastBuddy.logger.debug "Summarizing current discussion..."
-        response = PodcastBuddy.openai_client.chat(parameters: {
-          model: "gpt-4o",
-          messages: discussion_messages(text),
-          max_tokens: 250
-        })
-        new_summary = response.dig("choices", 0, "message", "content").strip
-        PodcastBuddy.logger.info to_human("Thoughts: #{new_summary}", :info)
-        PodcastBuddy.session.update_summary(new_summary)
-      rescue => e
-        PodcastBuddy.logger.error "Failed to summarize discussion: #{e.message}"
-      end
+      @show_assistant.generate_show_notes
     end
 
     def wait_for_question_start(listener)
@@ -243,7 +176,7 @@ module PodcastBuddy
 
     def answer_question(question, listener)
       Async do
-        summarize_latest(listener) if PodcastBuddy.session.current_summary.to_s.empty?
+        @show_assistant.summarize_latest if PodcastBuddy.session.current_summary.to_s.empty?
         latest_context = "#{PodcastBuddy.session.current_summary}\nTopics discussed recently:\n---\n#{PodcastBuddy.session.current_topics.split("\n").last(10)}\n---\n"
         previous_discussion = listener.transcriber.latest(1_000)
         PodcastBuddy.logger.info "Answering question:\n#{question}"
@@ -258,41 +191,17 @@ module PodcastBuddy
         })
         answer = response.dig("choices", 0, "message", "content").strip
         PodcastBuddy.logger.debug "Answer: #{answer}"
-        text_to_speech(answer)
+        audio_service.text_to_speech(answer, PodcastBuddy.answer_audio_file_path)
         PodcastBuddy.logger.debug("Answer converted to speech: #{PodcastBuddy.answer_audio_file_path}")
-        play_answer
+        PodcastBuddy.logger.debug("Playing answer...")
+        audio_service.play_audio(PodcastBuddy.answer_audio_file_path)
       end
-    end
-
-    def text_to_speech(text)
-      audio_service.text_to_speech(text, PodcastBuddy.answer_audio_file_path)
-    end
-
-    def play_answer
-      PodcastBuddy.logger.debug("Playing answer...")
-      audio_service.play_audio(PodcastBuddy.answer_audio_file_path)
     end
 
     private
 
     def audio_service
       @audio_service ||= AudioService.new
-    end
-
-    def generate_show_notes
-      return if PodcastBuddy.current_transcript.strip.empty?
-
-      response = PodcastBuddy.openai_client.chat(parameters: {
-        model: "gpt-4o",
-        messages: show_notes_messages,
-        max_tokens: 500
-      })
-      show_notes = response.dig("choices", 0, "message", "content").strip
-      File.open(PodcastBuddy.session.show_notes_path, "w") do |file|
-        file.puts show_notes
-      end
-
-      PodcastBuddy.logger.info to_human("Show notes saved to: #{PodcastBuddy.session.show_notes_path}", :success)
     end
 
     def to_human(text, label = :info)
@@ -308,20 +217,6 @@ module PodcastBuddy
       else
         text
       end
-    end
-
-    def topic_extraction_messages(text)
-      [
-        {role: "system", content: PodcastBuddy.config.topic_extraction_system_prompt},
-        {role: "user", content: format(PodcastBuddy.config.topic_extraction_user_prompt, {discussion: text})}
-      ]
-    end
-
-    def discussion_messages(text)
-      [
-        {role: "system", content: format(PodcastBuddy.config.discussion_system_prompt, {summary: PodcastBuddy.current_summary})},
-        {role: "user", content: format(PodcastBuddy.config.discussion_user_prompt, {discussion: text})}
-      ]
     end
 
     def show_notes_messages

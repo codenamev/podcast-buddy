@@ -17,9 +17,12 @@ require_relative "podcast_buddy/session"
 require_relative "podcast_buddy/transcriber"
 require_relative "podcast_buddy/listener"
 require_relative "podcast_buddy/audio_service"
+require_relative "podcast_buddy/show_assistant"
 
 module PodcastBuddy
   class Error < StandardError; end
+
+  NamedTask = Struct.new(:name, :task, keyword_init: true)
 
   class << self
     def config
