@@ -4,12 +4,6 @@ module PodcastBuddy
     # @return [Queue] queue for storing transcriptions
     attr_reader :transcription_queue, :transcriber
 
-    # @return [Queue] queue for storing questions
-    attr_reader :question_queue
-
-    # @return [Boolean] indicates if currently listening for a question
-    attr_reader :listening_for_question
-
     # Initialize a new Listener
     # @param transcriber [PodcastBuddy::Transcriber] the transcriber to use
     # @param whisper_command [String] the system command to use for streaming whisper
@@ -17,12 +11,11 @@ module PodcastBuddy
     def initialize(transcriber:, whisper_command: PodcastBuddy.whisper_command, whisper_logger: PodcastBuddy.whisper_logger)
       @transcriber = transcriber
       @transcription_queue = Queue.new
-      @question_queue = Queue.new
-      @current_discussion = ""
-      @listening_for_question = false
       @shutdown = false
       @whisper_command = whisper_command || PodcastBuddy.whisper_command
       @whisper_logger = whisper_logger || PodcastBuddy.whisper_logger
+      @transcription_signal = PodSignal.new
+      @listening_start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
     # Start the listening process
@@ -54,27 +47,8 @@ module PodcastBuddy
       @shutdown = true
     end
 
-    # Enter question listening mode
-    def listen_for_question!
-      @listening_for_question = true
-      @question_queue.clear
-    end
-
-    # Exit question listening mode and return running question
-    def stop_listening_for_question!
-      @listening_for_question = false
-      question = ""
-      question << @question_queue.pop until @question_queue.empty?
-      question
-    end
-
-    # @return [String] current discussion still in the @transcription_queue
-    def current_discussion
-      return @current_discussion if @transcription_queue.empty?
-
-      latest_transcriptions = []
-      latest_transcriptions << transcription_queue.pop until transcription_queue.empty?
-      @current_discussion = latest_transcriptions.join.strip
+    def subscribe(&block)
+      @transcription_signal.subscribe(&block)
     end
 
     private
@@ -85,14 +59,11 @@ module PodcastBuddy
       text = @transcriber.process(line)
       return if text.empty?
 
-      if @listening_for_question
-        PodcastBuddy.logger.info "Heard Question: #{text}"
-        @question_queue << text
-      else
-        PodcastBuddy.logger.info "Heard: #{text}"
-        PodcastBuddy.update_transcript(text)
-        @transcription_queue << text
-      end
+      PodcastBuddy.logger.info "Heard: #{text}"
+      PodcastBuddy.update_transcript(text)
+      @transcription_queue << text
+      @transcription_signal.trigger({ text: text, started_at: @listening_start })
+      text
     end
   end
 end

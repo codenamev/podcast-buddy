@@ -18,6 +18,7 @@ require_relative "podcast_buddy/transcriber"
 require_relative "podcast_buddy/listener"
 require_relative "podcast_buddy/audio_service"
 require_relative "podcast_buddy/show_assistant"
+require_relative "podcast_buddy/co_host"
 
 module PodcastBuddy
   class Error < StandardError; end

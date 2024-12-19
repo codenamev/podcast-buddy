@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+# frozen_string_literal: false
 
 module PodcastBuddy
   # Handles passive podcast assistance including transcription, summarization,
@@ -10,6 +10,8 @@ module PodcastBuddy
       @session = session
       @listener = PodcastBuddy::Listener.new(transcriber: PodcastBuddy::Transcriber.new)
       @shutdown = false
+      @listener.subscribe { |data| handle_transcription(data) }
+      @current_discussion = ""
     end
 
     def start
@@ -36,11 +38,11 @@ module PodcastBuddy
     end
 
     def summarize_latest
-      current_discussion = @listener.current_discussion
-      return if current_discussion.empty?
+      return if @current_discussion.empty?
 
-      PodcastBuddy.logger.debug "[periodic summarization] Latest transcript: #{current_discussion}"
-      extract_topics_and_summarize(current_discussion)
+      PodcastBuddy.logger.debug "[periodic summarization] Latest transcript: #{@current_discussion}"
+      extract_topics_and_summarize(@current_discussion)
+      @current_discussion = ""
     end
 
     def generate_show_notes
@@ -60,6 +62,10 @@ module PodcastBuddy
     end
 
     private
+
+    def handle_transcription(data)
+      @current_discussion << data[:text]
+    end
 
     def periodic_summarization(interval = 15)
       Async do

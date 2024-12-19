@@ -62,7 +62,7 @@ RSpec.describe PodcastBuddy::ShowAssistant do
     let(:listener) { instance_double(PodcastBuddy::Listener) }
 
     before do
-      allow(listener).to receive(:current_discussion).and_return("test discussion")
+      show_assistant.instance_variable_set(:@current_discussion, "test discussion")
       show_assistant.instance_variable_set(:@listener, listener)
     end
 
@@ -72,7 +72,7 @@ RSpec.describe PodcastBuddy::ShowAssistant do
     end
 
     it "does nothing when discussion is empty" do
-      allow(listener).to receive(:current_discussion).and_return("")
+      show_assistant.instance_variable_set(:@current_discussion, "")
       expect(show_assistant).not_to receive(:extract_topics_and_summarize)
       show_assistant.summarize_latest
     end
