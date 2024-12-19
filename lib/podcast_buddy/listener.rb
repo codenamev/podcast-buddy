@@ -16,6 +16,7 @@ module PodcastBuddy
       @whisper_logger = whisper_logger || PodcastBuddy.whisper_logger
       @transcription_signal = PodSignal.new
       @listening_start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      @announce_hearing = true
     end
 
     # Start the listening process
@@ -51,6 +52,14 @@ module PodcastBuddy
       @transcription_signal.subscribe(&block)
     end
 
+    def announce_what_you_hear!
+      @announce_hearing = true
+    end
+
+    def suppress_what_you_hear!
+      @announce_hearing = false
+    end
+
     private
 
     # Process a single transcription line
@@ -59,10 +68,10 @@ module PodcastBuddy
       text = @transcriber.process(line)
       return if text.empty?
 
-      PodcastBuddy.logger.info "Heard: #{text}"
+      PodcastBuddy.logger.info "Heard: #{text}" if @announce_hearing
       PodcastBuddy.update_transcript(text)
       @transcription_queue << text
-      @transcription_signal.trigger({ text: text, started_at: @listening_start })
+      @transcription_signal.trigger({text: text, started_at: @listening_start})
       text
     end
   end

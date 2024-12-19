@@ -60,6 +60,7 @@ module PodcastBuddy
         PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
         if input.include?("\n")
           @listening_for_question_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if @listening_for_question_at.nil?
+          @listener.suppress_what_you_hear!
           @question_buffer = ""
         end
       rescue Timeout::Error
@@ -88,6 +89,7 @@ module PodcastBuddy
         else
           PodcastBuddy.logger.info "End of question signal. Generating answer..."
           @listening_for_question_at = nil
+          @listener.announce_what_you_hear!
           answer_question(@question_buffer).wait
           break
         end
