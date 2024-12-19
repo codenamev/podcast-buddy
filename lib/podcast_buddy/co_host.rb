@@ -24,14 +24,15 @@ module PodcastBuddy
         loop do
           PodcastBuddy.logger.debug("Shutdown: wait_for_question...") and break if @shutdown
 
-          PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
-          wait_for_question_start
-          next unless @listening_for_question_at
+          if @listening_for_question_at
+            PodcastBuddy.logger.info PodcastBuddy.to_human("🎙️ Listening for question. Press ", :wait) +
+              PodcastBuddy.to_human("Enter", :input) +
+              PodcastBuddy.to_human(" to signal the end of the question...", :wait)
+          else
+            PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
+          end
 
-          PodcastBuddy.logger.info PodcastBuddy.to_human("🎙️ Listening for question. Press ", :wait) +
-            PodcastBuddy.to_human("Enter", :input) +
-            PodcastBuddy.to_human(" to signal the end of the question...", :wait)
-          wait_for_question_end
+          wait_for_input
         end
       end
     end
@@ -43,55 +44,38 @@ module PodcastBuddy
     private
 
     def handle_transcription(data)
-      if question_listening_started_before?(data[:started_at])
+      if @listening_for_question_at
         PodcastBuddy.logger.info PodcastBuddy.to_human("Heard Question: #{data[:text]}", :wait)
         @question_buffer << data[:text]
       end
     end
 
-    def question_listening_started_before?(start)
-      @listening_for_question_at && start <= @listening_for_question_at
+    def start_question
+      @listening_for_question_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      @listener.suppress_what_you_hear!
+      @question_buffer = ""
     end
 
-    def wait_for_question_start
+    def end_question
+      PodcastBuddy.logger.info "End of question signal. Generating answer..."
+      @listening_for_question_at = nil
+      @listener.announce_what_you_hear!
+      answer_question(@question_buffer).wait
+    end
+
+    def wait_for_input
       input = ""
-      Timeout.timeout(5) do
-        input = gets
-        PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
-        if input.include?("\n")
-          @listening_for_question_at = Process.clock_gettime(Process::CLOCK_MONOTONIC) if @listening_for_question_at.nil?
-          @listener.suppress_what_you_hear!
-          @question_buffer = ""
-        end
-      rescue Timeout::Error
-        return
-      end
-    end
-
-    def wait_for_question_end
       loop do
-        PodcastBuddy.logger.debug("Shutdown: wait_for_question_end...") and break if @shutdown
-
-        sleep 0.1 and next if @listening_for_question_at.nil?
-
-        input = ""
-        Timeout.timeout(5) do
+        PodcastBuddy.logger.debug("Shutdown: wait_for_input...") and break if @shutdown
+        Timeout.timeout(2) do
           input = gets
           PodcastBuddy.logger.debug("Input received...") if input.include?("\n")
           next unless input.to_s.include?("\n")
+          @listening_for_question_at.nil? ? start_question : end_question
+          break
         rescue Timeout::Error
           PodcastBuddy.logger.debug("Input timeout...")
           next
-        end
-
-        if input.empty?
-          next
-        else
-          PodcastBuddy.logger.info "End of question signal. Generating answer..."
-          @listening_for_question_at = nil
-          @listener.announce_what_you_hear!
-          answer_question(@question_buffer).wait
-          break
         end
       end
     end
