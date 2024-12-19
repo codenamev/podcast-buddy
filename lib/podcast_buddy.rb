@@ -17,9 +17,13 @@ require_relative "podcast_buddy/session"
 require_relative "podcast_buddy/transcriber"
 require_relative "podcast_buddy/listener"
 require_relative "podcast_buddy/audio_service"
+require_relative "podcast_buddy/show_assistant"
+require_relative "podcast_buddy/co_host"
 
 module PodcastBuddy
   class Error < StandardError; end
+
+  NamedTask = Struct.new(:name, :task, keyword_init: true)
 
   class << self
     def config
@@ -41,6 +45,21 @@ module PodcastBuddy
       SystemDependency.auto_install!(:whisper)
       SystemDependency.auto_install!(:bat)
       SystemDependency.resolve_whisper_model(whisper_model)
+    end
+
+    def to_human(text, label = :info)
+      case label.to_sym
+      when :info
+        Rainbow(text).blue
+      when :wait
+        Rainbow(text).yellow
+      when :input
+        Rainbow(text).black.bg(:yellow)
+      when :success
+        Rainbow(text).green
+      else
+        text
+      end
     end
   end
 
