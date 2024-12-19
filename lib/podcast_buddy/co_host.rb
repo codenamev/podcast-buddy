@@ -28,7 +28,9 @@ module PodcastBuddy
           wait_for_question_start
           next unless @listening_for_question_at
 
-          PodcastBuddy.logger.info to_human("🎙️ Listening for question. Press ", :wait) + to_human("Enter", :input) + to_human(" to signal the end of the question...", :wait)
+          PodcastBuddy.logger.info PodcastBuddy.to_human("🎙️ Listening for question. Press ", :wait) +
+            PodcastBuddy.to_human("Enter", :input) +
+            PodcastBuddy.to_human(" to signal the end of the question...", :wait)
           wait_for_question_end
         end
       end
@@ -42,7 +44,7 @@ module PodcastBuddy
 
     def handle_transcription(data)
       if question_listening_started_before?(data[:started_at])
-        PodcastBuddy.logger.info "Heard Question: #{data[:text]}"
+        PodcastBuddy.logger.info PodcastBuddy.to_human("Heard Question: #{data[:text]}", :wait)
         @question_buffer << data[:text]
       end
     end
@@ -112,21 +114,6 @@ module PodcastBuddy
         PodcastBuddy.logger.debug("Answer converted to speech: #{PodcastBuddy.answer_audio_file_path}")
         PodcastBuddy.logger.debug("Playing answer...")
         @audio_service.play_audio(PodcastBuddy.answer_audio_file_path)
-      end
-    end
-
-    def to_human(text, label = :info)
-      case label.to_sym
-      when :info
-        Rainbow(text).blue
-      when :wait
-        Rainbow(text).yellow
-      when :input
-        Rainbow(text).black.bg(:yellow)
-      when :success
-        Rainbow(text).green
-      else
-        text
       end
     end
   end
