@@ -86,7 +86,7 @@ module PodcastBuddy
 
     # @return [String]
     def whisper_command
-      "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-#{whisper_model}.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
+      "#{PodcastBuddy.cache_dir}/whisper.cpp/build/bin/stream -m #{PodcastBuddy.cache_dir}/whisper.cpp/models/ggml-#{whisper_model}.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
     end
   end
 end

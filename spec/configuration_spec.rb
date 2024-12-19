@@ -63,13 +63,13 @@ RSpec.describe PodcastBuddy::Configuration do
 
   describe "#whisper_command" do
     it "returns the expected command string" do
-      expected_command = "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-small.en-q5_1.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
+      expected_command = "#{PodcastBuddy.cache_dir}/whisper.cpp/build/bin/stream -m #{PodcastBuddy.cache_dir}/whisper.cpp/models/ggml-small.en-q5_1.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
       expect(config.whisper_command).to eq(expected_command)
     end
 
     it "incorporates changes to whisper_model" do
       config.whisper_model = "test_model"
-      expected_command = "./whisper.cpp/stream -m ./whisper.cpp/models/ggml-test_model.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
+      expected_command = "#{PodcastBuddy.cache_dir}/whisper.cpp/build/bin/stream -m #{PodcastBuddy.cache_dir}/whisper.cpp/models/ggml-test_model.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
       expect(config.whisper_command).to eq(expected_command)
     end
   end
