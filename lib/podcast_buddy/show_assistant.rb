@@ -113,7 +113,7 @@ module PodcastBuddy
           max_tokens: 250
         })
         new_summary = response.dig("choices", 0, "message", "content").strip
-        PodcastBuddy.logger.info "Thoughts: #{new_summary}"
+        PodcastBuddy.logger.info PodcastBuddy.to_human("Thoughts: #{new_summary}", :info)
         @session.update_summary(new_summary)
       rescue => e
         PodcastBuddy.logger.error "Failed to summarize discussion: #{e.message}"
