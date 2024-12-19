@@ -39,7 +39,12 @@ module PodcastBuddy
       @session = Session.new(name: name)
     end
 
+    def cache_dir
+      @cache_dir ||= "#{ENV["HOME"]}/.buddy"
+    end
+
     def setup
+      Dir.mkdir PodcastBuddy.cache_dir unless Dir.exist?(PodcastBuddy.cache_dir)
       SystemDependency.auto_install!(:git)
       SystemDependency.auto_install!(:sdl2)
       SystemDependency.auto_install!(:whisper)

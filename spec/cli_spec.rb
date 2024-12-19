@@ -24,6 +24,7 @@ RSpec.describe PodcastBuddy::CLI do
 
   describe "#run" do
     let(:show_assistant) { instance_double(PodcastBuddy::ShowAssistant) }
+    let(:listener) { instance_double(PodcastBuddy::Listener) }
 
     before do
       allow(PodcastBuddy).to receive(:logger).and_return(Logger.new(nil))
@@ -33,6 +34,8 @@ RSpec.describe PodcastBuddy::CLI do
       allow(show_assistant).to receive(:start)
       allow(show_assistant).to receive(:stop)
       allow(show_assistant).to receive(:generate_show_notes)
+      allow(show_assistant).to receive(:listener).and_return(listener)
+      allow(listener).to receive(:subscribe)
     end
 
     it "configures logger and session" do

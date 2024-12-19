@@ -20,13 +20,14 @@ module PodcastBuddy
     def initialize(argv)
       @options = parse_options(argv)
       @tasks = []
-      @show_assistant = PodcastBuddy::ShowAssistant.new
     end
 
     def run
       configure_logger
       configure_session
       setup_dependencies
+      @show_assistant = PodcastBuddy::ShowAssistant.new
+      @co_host = PodcastBuddy::CoHost.new(listener: @show_assistant.listener)
       start_recording
     rescue Interrupt
       handle_shutdown
@@ -77,9 +78,12 @@ module PodcastBuddy
       if @options[:name]
         base_path = "#{PodcastBuddy.root}/tmp/#{@options[:name]}"
         FileUtils.mkdir_p base_path
-        PodcastBuddy.session = @options[:name]
+        PodcastBuddy.start_session(name: @options[:name])
         PodcastBuddy.logger.info PodcastBuddy.to_human("Using custom session name: #{@options[:name]}", :info)
-        PodcastBuddy.logger.info PodcastBuddy.to_human("  Saving files to: #{PodcastBuddy.session}", :info)
+        PodcastBuddy.logger.info PodcastBuddy.to_human("  Saving files to: #{PodcastBuddy.session.base_path}", :info)
+      else
+        PodcastBuddy.start_session
+        PodcastBuddy.logger.info PodcastBuddy.to_human("Saving files to: #{PodcastBuddy.session.base_path}", :info)
       end
     end
 
@@ -92,7 +96,6 @@ module PodcastBuddy
 
     def start_recording
       Sync do |task|
-        @co_host = PodcastBuddy::CoHost.new(listener: @show_assistant.listener)
         show_assistant_task = task.async { @show_assistant.start }
         co_host_task = task.async { @co_host.start }
         @tasks = [

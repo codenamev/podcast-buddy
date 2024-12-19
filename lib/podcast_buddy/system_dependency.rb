@@ -21,12 +21,12 @@ module PodcastBuddy
     end
 
     def self.model_downloaded?(model)
-      File.exist?(File.join(PodcastBuddy.root, "whisper.cpp", "models", "ggml-#{model}.bin"))
+      File.exist?(File.join(PodcastBuddy.cache_dir, "whisper.cpp", "models", "ggml-#{model}.bin"))
     end
 
     def self.download_model(model)
       originating_directory = Dir.pwd
-      Dir.chdir("whisper.cpp")
+      Dir.chdir("#{PodcastBuddy.cache_dir}/whisper.cpp")
       PodcastBuddy.logger.info "Downloading GGML model: #{PodcastBuddy.whisper_model}"
       PodcastBuddy.logger.info `bash ./models/download-ggml-model.sh #{PodcastBuddy.whisper_model}`
     ensure
@@ -36,7 +36,7 @@ module PodcastBuddy
     def installed?
       PodcastBuddy.logger.info "Checking for system dependency: #{name}..."
       if name.to_s == "whisper"
-        Dir.exist?("whisper.cpp")
+        Dir.exist?("#{PodcastBuddy.cache_dir}/whisper.cpp")
       else
         system("brew list -1 #{name} > /dev/null") || system("type -a #{name}")
       end
@@ -46,12 +46,14 @@ module PodcastBuddy
       PodcastBuddy.logger.info "Installing #{name}..."
       originating_directory = Dir.pwd
       if name.to_s == "whisper"
-        Dir.chdir(PodcastBuddy.root)
+        Dir.chdir(PodcastBuddy.cache_dir)
+        PodcastBuddy.logger.info "Setting up whipser.cpp in #{PodcastBuddy.cache_dir}/whipser.cpp"
         PodcastBuddy.logger.info `git clone https://github.com/ggerganov/whisper.cpp`
         Dir.chdir("whisper.cpp")
         PodcastBuddy.logger.info "Downloading GGML model: #{PodcastBuddy.whisper_model}"
-        PodcastBuddy.logger.info `bash ./models/download-ggml-model.sh #{PodcastBuddy.whisper_model}`
-        PodcastBuddy.logger.info `make && make stream`
+        PodcastBuddy.logger.info `bash #{PodcastBuddy.cache_dir}/whisper.cpp/models/download-ggml-model.sh #{PodcastBuddy.whisper_model}`
+        PodcastBuddy.logger.info "Building whipser.cpp with streaming support..."
+        PodcastBuddy.logger.info `cmake -B build -DWHISPER_SDL2=ON && cmake --build build --config Release`
       else
         `brew list #{name} || brew install #{name}`
       end
