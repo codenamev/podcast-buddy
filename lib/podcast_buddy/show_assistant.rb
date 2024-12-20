@@ -6,12 +6,13 @@ module PodcastBuddy
   class ShowAssistant
     attr_reader :listener
 
-    def initialize(session: PodcastBuddy.session)
+    def initialize(session: PodcastBuddy.session, buddyfile: nil)
       @session = session
       @listener = PodcastBuddy::Listener.new(transcriber: PodcastBuddy::Transcriber.new)
       @shutdown = false
       @listener.subscribe { |data| handle_transcription(data) }
       @current_discussion = ""
+      @buddyfile = buddyfile || Buddyfile.load
     end
 
     def start
@@ -63,8 +64,35 @@ module PodcastBuddy
 
     private
 
+    def perform_buddyfile_actions(discussion)
+      return if discussion.empty?
+
+      @buddyfile.actions.each do |action|
+        action.buffer_text(discussion)
+        buffered = action.buffered_text
+        next if buffered.empty?
+
+        Async do
+          response = PodcastBuddy.openai_client.chat(parameters: action.llm_options.merge(
+            messages: action.messages_for(buffered)
+          ))
+          output = response.dig("choices", 0, "message", "content").strip
+          
+          File.open(action.output_file, action.output_mode == :append ? "a" : "w") do |f|
+            f.puts output
+          end
+
+          action.mark_processed!
+        rescue => e
+          PodcastBuddy.logger.warn "[#{action.name}] action failed: #{e.message}"
+        end
+      end
+    end
+
+
     def handle_transcription(data)
       @current_discussion << data[:text]
+      perform_buddyfile_actions(data[:text])
     end
 
     def periodic_summarization(interval = 15)
@@ -74,6 +102,7 @@ module PodcastBuddy
 
           sleep interval
           summarize_latest
+          perform_buddyfile_actions
         rescue => e
           PodcastBuddy.logger.warn "[summarization] periodic summarization failed: #{e.message}"
         end
