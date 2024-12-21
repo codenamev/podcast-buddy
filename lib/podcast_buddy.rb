@@ -45,12 +45,7 @@ module PodcastBuddy
     end
 
     def setup
-      Dir.mkdir PodcastBuddy.cache_dir unless Dir.exist?(PodcastBuddy.cache_dir)
-      SystemDependency.auto_install!(:git)
-      SystemDependency.auto_install!(:sdl2)
-      SystemDependency.auto_install!(:whisper)
-      SystemDependency.auto_install!(:bat)
-      SystemDependency.resolve_whisper_model(whisper_model)
+      ::MeetingBuddy.setup
     end
 
     def to_human(text, label = :info)

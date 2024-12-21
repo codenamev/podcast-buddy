@@ -51,21 +51,12 @@ RSpec.describe PodcastBuddy do
 
   describe ".setup" do
     before do
-      allow(PodcastBuddy::SystemDependency).to receive(:auto_install!)
-      allow(PodcastBuddy::SystemDependency).to receive(:resolve_whisper_model)
+      allow(MeetingBuddy).to receive(:setup)
     end
 
-    it "installs required system dependencies" do
-      expect(PodcastBuddy::SystemDependency).to receive(:auto_install!).with(:git)
-      expect(PodcastBuddy::SystemDependency).to receive(:auto_install!).with(:sdl2)
-      expect(PodcastBuddy::SystemDependency).to receive(:auto_install!).with(:whisper)
-      expect(PodcastBuddy::SystemDependency).to receive(:auto_install!).with(:bat)
+    it "delegates to MeetingBuddy" do
       PodcastBuddy.setup
-    end
-
-    it "resolves the whisper model" do
-      expect(PodcastBuddy::SystemDependency).to receive(:resolve_whisper_model).with(PodcastBuddy.whisper_model)
-      PodcastBuddy.setup
+      expect(MeetingBuddy).to have_received(:setup)
     end
   end
 
