@@ -2,10 +2,8 @@
 
 module PodcastBuddy
   # Manages configuration for PodcastBuddy
-  class Configuration
+  class Configuration < MeetingBuddy::Configuration
     attr_accessor :root,
-      :whisper_model,
-      :logger,
       :topic_extraction_system_prompt,
       :topic_extraction_user_prompt,
       :discussion_system_prompt,
@@ -68,25 +66,13 @@ module PodcastBuddy
     PROMPT
 
     def initialize
+      super
       @root = Dir.pwd
-      @whisper_model = "small.en-q5_1"
       @logger = Logger.new($stdout, level: Logger::INFO)
       @topic_extraction_system_prompt = DEFAULT_TOPIC_EXTRACTION_SYSTEM_PROMPT
       @topic_extraction_user_prompt = DEFAULT_TOPIC_EXTRACTION_USER_PROMPT
       @discussion_system_prompt = DEFAULT_DISCUSSION_SYSTEM_PROMPT
       @discussion_user_prompt = DEFAULT_DISCUSSION_USER_PROMPT
-    end
-
-    # @return [OpenAI::Client]
-    def openai_client
-      raise Error, "Please set an OPENAI_ACCESS_TOKEN environment variable." if ENV["OPENAI_ACCESS_TOKEN"].to_s.strip.empty?
-
-      @openai_client ||= OpenAI::Client.new(access_token: ENV["OPENAI_ACCESS_TOKEN"], log_errors: true)
-    end
-
-    # @return [String]
-    def whisper_command
-      "#{PodcastBuddy.cache_dir}/whisper.cpp/build/bin/stream -m #{PodcastBuddy.cache_dir}/whisper.cpp/models/ggml-#{whisper_model}.bin -t 8 --step 0 --length 5000 --keep 500 --vad-thold 0.75 --audio-ctx 0 --keep-context -c 1 -l en"
     end
   end
 end
