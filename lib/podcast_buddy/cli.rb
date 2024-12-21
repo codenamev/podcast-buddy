@@ -58,7 +58,7 @@ module PodcastBuddy
 
     def configure_logger
       if @options[:debug]
-        PodcastBuddy.logger.info PodcastBuddy.to_human("Turning on debug mode...", :info)
+        PodcastBuddy.logger.info MeetingBuddy.to_human("Turning on debug mode...", :info)
         PodcastBuddy.logger.level = Logger::DEBUG
       else
         PodcastBuddy.logger.level = Logger::INFO
@@ -72,18 +72,18 @@ module PodcastBuddy
     def configure_session
       if @options[:whisper_model]
         PodcastBuddy.config.whisper_model = @options[:whisper_model]
-        PodcastBuddy.logger.info PodcastBuddy.to_human("Using whisper model: #{@options[:whisper_model]}", :info)
+        PodcastBuddy.logger.info MeetingBuddy.to_human("Using whisper model: #{@options[:whisper_model]}", :info)
       end
 
       if @options[:name]
         base_path = "#{PodcastBuddy.root}/tmp/#{@options[:name]}"
         FileUtils.mkdir_p base_path
         PodcastBuddy.start_session(name: @options[:name])
-        PodcastBuddy.logger.info PodcastBuddy.to_human("Using custom session name: #{@options[:name]}", :info)
-        PodcastBuddy.logger.info PodcastBuddy.to_human("  Saving files to: #{PodcastBuddy.session.base_path}", :info)
+        PodcastBuddy.logger.info MeetingBuddy.to_human("Using custom session name: #{@options[:name]}", :info)
+        PodcastBuddy.logger.info MeetingBuddy.to_human("  Saving files to: #{PodcastBuddy.session.base_path}", :info)
       else
         PodcastBuddy.start_session
-        PodcastBuddy.logger.info PodcastBuddy.to_human("Saving files to: #{PodcastBuddy.session.base_path}", :info)
+        PodcastBuddy.logger.info MeetingBuddy.to_human("Saving files to: #{PodcastBuddy.session.base_path}", :info)
       end
     end
 
@@ -110,7 +110,7 @@ module PodcastBuddy
     end
 
     def handle_shutdown
-      PodcastBuddy.logger.info PodcastBuddy.to_human("\nShutting down streams...", :wait)
+      PodcastBuddy.logger.info MeetingBuddy.to_human("\nShutting down streams...", :wait)
       @shutdown = true
     end
 
@@ -118,11 +118,11 @@ module PodcastBuddy
       @show_assistant.stop
       @co_host&.stop
       @tasks.each do |task|
-        PodcastBuddy.logger.info PodcastBuddy.to_human("Waiting for #{task.name} to shutdown...", :wait)
+        PodcastBuddy.logger.info MeetingBuddy.to_human("Waiting for #{task.name} to shutdown...", :wait)
         task&.task&.wait
       end
 
-      PodcastBuddy.logger.info PodcastBuddy.to_human("Generating show notes...", :wait)
+      PodcastBuddy.logger.info MeetingBuddy.to_human("Generating show notes...", :wait)
       @show_assistant.generate_show_notes
     end
   end

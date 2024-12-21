@@ -47,21 +47,6 @@ module PodcastBuddy
     def setup
       ::MeetingBuddy.setup
     end
-
-    def to_human(text, label = :info)
-      case label.to_sym
-      when :info
-        Rainbow(text).blue
-      when :wait
-        Rainbow(text).yellow
-      when :input
-        Rainbow(text).black.bg(:yellow)
-      when :success
-        Rainbow(text).green
-      else
-        text
-      end
-    end
   end
 
   configure

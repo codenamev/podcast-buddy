@@ -25,9 +25,9 @@ module PodcastBuddy
           PodcastBuddy.logger.debug("Shutdown: wait_for_question...") and break if @shutdown
 
           if @listening_for_question_at
-            PodcastBuddy.logger.info PodcastBuddy.to_human("🎙️ Listening for question. Press ", :wait) +
-              PodcastBuddy.to_human("Enter", :input) +
-              PodcastBuddy.to_human(" to signal the end of the question...", :wait)
+            PodcastBuddy.logger.info MeetingBuddy.to_human("🎙️ Listening for question. Press ", :wait) +
+              MeetingBuddy.to_human("Enter", :input) +
+              MeetingBuddy.to_human(" to signal the end of the question...", :wait)
           else
             PodcastBuddy.logger.info Rainbow("Press ").blue + Rainbow("Enter").black.bg(:yellow) + Rainbow(" to signal a question start...").blue
           end
@@ -45,7 +45,7 @@ module PodcastBuddy
 
     def handle_transcription(data)
       if @listening_for_question_at
-        PodcastBuddy.logger.info PodcastBuddy.to_human("Heard Question: #{data[:text]}", :wait)
+        PodcastBuddy.logger.info MeetingBuddy.to_human("Heard Question: #{data[:text]}", :wait)
         @question_buffer << data[:text]
       end
     end
