@@ -33,8 +33,5 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "async"
-  spec.add_dependency "async-http-faraday"
-  spec.add_dependency "ruby-openai"
-  spec.add_dependency "rainbow"
+  spec.add_dependency "meeting-buddy"
 end

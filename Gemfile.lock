@@ -2,73 +2,75 @@ PATH
   remote: .
   specs:
     podcast-buddy (0.2.1)
-      async
-      async-http-faraday
-      rainbow
-      ruby-openai
+      meeting-buddy
 
 GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.2)
-    async (2.17.0)
-      console (~> 1.26)
+    async (2.21.1)
+      console (~> 1.29)
       fiber-annotation
       io-event (~> 1.6, >= 1.6.5)
-    async-http (0.80.0)
+    async-http (0.86.0)
       async (>= 2.10.2)
-      async-pool (~> 0.7)
-      io-endpoint (~> 0.11)
-      io-stream (~> 0.4)
-      protocol-http (~> 0.37)
-      protocol-http1 (~> 0.27)
-      protocol-http2 (~> 0.19)
-      traces (>= 0.10)
+      async-pool (~> 0.9)
+      io-endpoint (~> 0.14)
+      io-stream (~> 0.6)
+      metrics (~> 0.12)
+      protocol-http (~> 0.43)
+      protocol-http1 (>= 0.28.1)
+      protocol-http2 (~> 0.22)
+      traces (~> 0.10)
     async-http-faraday (0.19.0)
       async-http (~> 0.42)
       faraday
-    async-pool (0.8.1)
+    async-pool (0.10.2)
       async (>= 1.25)
-      metrics
       traces
-    console (1.27.0)
+    console (1.29.2)
       fiber-annotation
       fiber-local (~> 1.1)
       json
     diff-lcs (1.5.1)
     event_stream_parser (1.0.0)
-    faraday (2.12.0)
-      faraday-net_http (>= 2.0, < 3.4)
+    faraday (2.12.2)
+      faraday-net_http (>= 2.0, < 3.5)
       json
       logger
-    faraday-multipart (1.0.4)
-      multipart-post (~> 2)
-    faraday-net_http (3.3.0)
-      net-http
+    faraday-multipart (1.1.0)
+      multipart-post (~> 2.0)
+    faraday-net_http (3.4.0)
+      net-http (>= 0.5.0)
     fiber-annotation (0.2.0)
     fiber-local (1.1.0)
       fiber-storage
     fiber-storage (1.0.0)
-    io-endpoint (0.13.1)
-    io-event (1.7.1)
-    io-stream (0.4.3)
+    io-endpoint (0.14.0)
+    io-event (1.7.5)
+    io-stream (0.6.1)
     json (2.7.2)
     language_server-protocol (3.17.0.3)
     lint_roller (1.1.0)
-    logger (1.6.1)
-    metrics (0.10.2)
+    logger (1.6.4)
+    meeting-buddy (0.1.0)
+      async
+      async-http-faraday
+      rainbow
+      ruby-openai
+    metrics (0.12.1)
     multipart-post (2.4.1)
-    net-http (0.4.1)
+    net-http (0.6.0)
       uri
     parallel (1.26.3)
     parser (3.3.5.0)
       ast (~> 2.4.1)
       racc
     protocol-hpack (1.5.1)
-    protocol-http (0.37.0)
-    protocol-http1 (0.27.0)
+    protocol-http (0.47.1)
+    protocol-http1 (0.28.1)
       protocol-http (~> 0.22)
-    protocol-http2 (0.19.3)
+    protocol-http2 (0.22.0)
       protocol-hpack (~> 1.4)
       protocol-http (~> 0.18)
     racc (1.8.1)
@@ -105,7 +107,7 @@ GEM
     rubocop-performance (1.22.1)
       rubocop (>= 1.48.1, < 2.0)
       rubocop-ast (>= 1.31.1, < 2.0)
-    ruby-openai (7.1.0)
+    ruby-openai (7.3.1)
       event_stream_parser (>= 0.3.0, < 2.0.0)
       faraday (>= 1)
       faraday-multipart (>= 1)
@@ -122,9 +124,9 @@ GEM
     standard-performance (1.5.0)
       lint_roller (~> 1.1)
       rubocop-performance (~> 1.22.0)
-    traces (0.13.1)
+    traces (0.14.1)
     unicode-display_width (2.6.0)
-    uri (0.13.1)
+    uri (1.0.2)
 
 PLATFORMS
   ruby
