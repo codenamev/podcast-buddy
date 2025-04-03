@@ -52,7 +52,7 @@ module PodcastBuddy
         Dir.chdir("whisper.cpp")
         PodcastBuddy.logger.info "Downloading GGML model: #{PodcastBuddy.whisper_model}"
         PodcastBuddy.logger.info `bash #{PodcastBuddy.cache_dir}/whisper.cpp/models/download-ggml-model.sh #{PodcastBuddy.whisper_model}`
-        PodcastBuddy.logger.info "Building whipser.cpp with streaming support..."
+        PodcastBuddy.logger.info "Building whipser.cpp with streaming support. This may take a few minutes..."
         PodcastBuddy.logger.info `cmake -B build -DWHISPER_SDL2=ON && cmake --build build --config Release`
       else
         `brew list #{name} || brew install #{name}`
