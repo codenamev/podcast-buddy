@@ -71,7 +71,7 @@ module PodcastBuddy
   configure
 
   def self.root
-    Dir.pwd
+    cache_dir
   end
 
   def self.session=(name)

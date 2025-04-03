@@ -68,7 +68,7 @@ module PodcastBuddy
     PROMPT
 
     def initialize
-      @root = Dir.pwd
+      @root = PodcastBuddy.cache_dir
       @whisper_model = "small.en-q5_1"
       @logger = Logger.new($stdout, level: Logger::INFO)
       @topic_extraction_system_prompt = DEFAULT_TOPIC_EXTRACTION_SYSTEM_PROMPT

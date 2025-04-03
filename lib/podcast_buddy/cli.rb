@@ -76,7 +76,7 @@ module PodcastBuddy
       end
 
       if @options[:name]
-        base_path = "#{PodcastBuddy.root}/tmp/#{@options[:name]}"
+        base_path = "#{PodcastBuddy.root}/sessions/#{@options[:name]}"
         FileUtils.mkdir_p base_path
         PodcastBuddy.start_session(name: @options[:name])
         PodcastBuddy.logger.info PodcastBuddy.to_human("Using custom session name: #{@options[:name]}", :info)

@@ -9,7 +9,7 @@ module PodcastBuddy
 
     def initialize(name: nil)
       @name = name || Time.now.strftime("%Y-%m-%d_%H-%M-%S")
-      @base_path = File.join(PodcastBuddy.config.root, "tmp", @name)
+      @base_path = File.join(PodcastBuddy.config.root, "sessions", @name)
       FileUtils.mkdir_p(@base_path)
     end
 

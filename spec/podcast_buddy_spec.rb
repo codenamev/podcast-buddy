@@ -70,8 +70,8 @@ RSpec.describe PodcastBuddy do
   end
 
   describe ".root" do
-    it "returns the current working directory" do
-      expect(PodcastBuddy.root).to eq(Dir.pwd)
+    it "returns the cache directory" do
+      expect(PodcastBuddy.root).to eq(PodcastBuddy.cache_dir)
     end
   end
 

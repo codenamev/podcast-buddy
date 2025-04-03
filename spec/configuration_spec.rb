@@ -7,7 +7,7 @@ RSpec.describe PodcastBuddy::Configuration do
 
   describe "initialization" do
     it "sets default values" do
-      expect(config.root).to eq(Dir.pwd)
+      expect(config.root).to eq(PodcastBuddy.root)
       expect(config.whisper_model).to eq("small.en-q5_1")
       expect(config.logger).to be_a(Logger)
     end
