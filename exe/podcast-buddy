@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-load File.expand_path("podcast_buddy", __dir__)
+require_relative "../lib/podcast_buddy"
+
+PodcastBuddy::CLI.new(ARGV).run
